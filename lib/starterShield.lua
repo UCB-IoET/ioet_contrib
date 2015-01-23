@@ -72,7 +72,12 @@ end
 local Button = {}
 
 Button.start = function() 
--- TODO
+    -- set buttons as inputs
+    storm.io.set_mode(storm.io.INPUT,   
+    storm.io.D9, storm.io.D10, storm.io.D11)
+    -- enable internal resistor pullups
+    storm.io.set_pull(storm.io.PULL_UP, 
+    storm.io.D9, storm.io.D10, storm.io.D11)
 end
 
 -- Get the current state of the button
