@@ -48,7 +48,12 @@ end
 --    this is dull for green, but bright for read and blue
 --    assumes cord.enter_loop() is in effect to schedule filaments
 LED.flash=function(color,duration)
--- TODO
+   if not duration then duration=10
+   local pin = LED.pins[color]
+   storm.io.set(1, storm.io[pin])
+   storm.os.invokeLater(storm.os.MILLISECOND*duration, function()
+     storm.io.set(0, storm.io[pin]) 
+   end)
 end
 
 ----------------------------------------------
