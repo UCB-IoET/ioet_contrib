@@ -3,7 +3,7 @@ LED = require("led")
 
 local INVOKER_PORT = 1526
 local PUBLISH_PORT = 1525
-local CLEANING_THRESHOLD = 100000
+local CLEANING_THRESHOLD = 20 * storm.os.SECOND
 local CLEANING_PERIOD = 5 * storm.os.SECOND
 
 
@@ -30,12 +30,14 @@ function Server:new(o)
 end
 
 function Server:init()
-	print("\nSTARTING SERVER ON", self.port)
+	print("\nPUBLISHING SERVER ON", self.port)
 	self.publishing_socket = storm.net.udpsocket(self.port, 
 				function(payload, from, port)
-						print("Getting msg from", from, port)
-						route_messages(payload, from, port)
+					print("Getting msg from", from, port)
+					route_messages(payload, from, port)
 				end)
+
+	print("INVOKING SERVER ON", self.listening_port)
 	self.invoking_socket = storm.net.udpsocket(self.listening_port, 
 				function(payload, from, port)
 					print("Getting invocation from", from, port)
@@ -56,15 +58,17 @@ end
 		local service_invoke = {service, {value}}
 		local msg = storm.mp.pack(service_invoke)
 		-- UNICAST THAT
-		storm.net.sendto(self.invoking_socket, msg, m.from, m.port)
+		storm.net.sendto(self.invoking_socket, msg, m.from, m.invoker_port)
 	end
 
 
 	function route_messages(payload, from, port)
 		local msg = storm.mp.unpack(payload)
 		if msg.id then -- service announcement
+			print("Handling service announcement")
 			log_service(msg, from, port)
 		else -- service invocation from other
+			print("Rendering service")
 			route_service(msg)
 		end
 	end
@@ -83,7 +87,8 @@ end
 	end
 
 	 
-	function route_service(m, msg)
+	function route_service(msg)
+		print("Getting request for", msg)
 	   -- parse msg
 	   service = msg[1]
 	   params = msg[2]
@@ -105,7 +110,7 @@ end
 		if service == "setRlyA" then
 			print("Turning on the RED LED")
 			red_led:on()
-			red_led2:on()
+			red2_led:on()
 	   	elseif service == "setRlyB" then
 	      	print("Turning on the Blue LED")
 	      	blue_led:on()
@@ -163,12 +168,13 @@ function init()
 	s:begin_publish()
 
 	-- INVOKING CODE
-	-- id = "ApplesandBananas"
-	-- if services_heard[id] then
-	-- 	storm.os.invokePeriodically(5 * storm.os.SECOND, function()
-	-- 		s:invoke(services_heard[id], "setRlyA", 1)
-	-- 	end
-
+		-- storm.os.invokePeriodically(5 * storm.os.SECOND, function()
+		-- 	id = "ApplesandBananas"
+		-- 	if services_heard[id] then
+		-- 		s:invoke(services_heard[id], "setRlyA", 1)
+		-- 	end
+		-- end)
+	
 
 	run_service_print()
 	run_cleaning_service()
