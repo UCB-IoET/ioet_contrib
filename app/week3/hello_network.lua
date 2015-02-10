@@ -1,3 +1,11 @@
+-- TODO
+-- =================
+-- Send an acknowledgement when a service has been rendered. 
+-- Need to stop invocking a service when we heard the ack. 
+-- Need to change self.port to self.publishing_port
+-- Implement the roundtime / getTime func
+
+
 require "cord" 
 LED = require("led")
 
