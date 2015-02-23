@@ -8,6 +8,7 @@
 
 require "cord" 
 LED = require("led")
+Button = require("button")
 
 local INVOKER_PORT = 1526
 local PUBLISH_PORT = 1525
@@ -22,7 +23,9 @@ local svc_manifest = {
 			setRlyA={ s="setBool", desc= "red LED" },
 			setRlyB={ s="setBool", desc= "green LED" },
 			setRlyC={ s="setBool", desc= "blue LED" },
-			getTime={ s="", desc="get my time"}
+			setFPColorSound={s="setInt", desc = "Turn on light soundcombo with a number between 1 and 7"},
+			turnOffFP={s = "setBool", desc = "Turn off the sound"}	
+			--getTime={ s="", desc="get my time"}
 	   }
 
 
@@ -107,21 +110,45 @@ end
 			print("Invalid service", msg[1])
 		end
 	end
-
+	
+	function simulate_message(service,params)
+		handle_service(service,params)
+	end 
 
 	local blue_led = LED:new("D2")
 	local green_led = LED:new("D3")
 	local red_led = LED:new("D4")
 	local red2_led = LED:new("D5")
-	-- 
+	--
+
+	function led_handler(led, isOn)
+		if isOn then  
+			print("Turning " , led.pin, "on")
+			led:on()
+		else 
+			print("Turning", led.pin, "off")
+			led:off()
+		end 
+	end 
+
 	function handle_service(service, params)
 		if service == "setRlyA" then
-			print("Turning on the RED LED")
-			red_led:on()
-			red2_led:on()
-	   	elseif service == "setRlyB" then
-	      	print("Turning on the Blue LED")
-	      	blue_led:on()
+	   		led_handler(red_led, params.setBool)
+			led_handler(red2_led, params.setBool)
+		elseif service == "setRlyB" then
+			led_handler(green_led, params.setBool)
+		elseif service == "setRlyC" then 
+			led_handler(blue_led, params.setBool)
+		elseif service == "setFPColorSound" then
+			local id = params.setInt
+			if id <= 12 or id > 0 then 
+			  	print("Setting color and sound between 1-12", id)
+			else 
+				print("Invalid sound selection, 1-12 please") 
+			end  
+			-- Actually need to handle params
+		elseif service == "turnOffFP" then
+			print("Turning off FP")
 		end
 	end
 
@@ -171,7 +198,22 @@ s = Server:new{port = PUBLISH_PORT, listening_port = INVOKER_PORT}
 
 function init()
 	s:init()
+	local b = Button:new("D9")
+	local d = Button:new("D10")
+	local e = Button:new("D11")
 	
+	b:whenever("RISING", function()
+		simulate_message("setRlyA", {setBool = true})
+	end)
+
+	d:whenever("RISING", function()
+		simulate_message("setFPColorSound", {setInt = 6})	
+	end)
+
+	e:whenever("RISING", function()
+                simulate_message("setRlyA", {setBool = false})
+        end)
+
 	-- PUBLISHING CODE
 	s:begin_publish()
 
