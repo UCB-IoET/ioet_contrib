@@ -42,7 +42,9 @@ asock = storm.net.udpsocket(cport,
 			    end)
 
 
-local svc_manifest = {id=”ATeam”}              -- why ATeam?
+local svc_manifest = {id=”tom”}
+svc_manifest["ledOff"] = {s="lightOff", desc="turn light off"}
+--svc_manifest["Time"] = 
 local msg = storm.mp.pack(svc_manifest)
 storm.os.invokePeriodically(5*storm.os.SECOND, function()
 	blu:flash(3)
