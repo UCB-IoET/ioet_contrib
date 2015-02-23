@@ -9,6 +9,7 @@
 require "cord" 
 LED = require("led")
 Button = require("button")
+require "flesh"
 
 local INVOKER_PORT = 1526
 local PUBLISH_PORT = 1525
@@ -19,7 +20,7 @@ local CLEANING_PERIOD = 5 * storm.os.SECOND
 
 
 local svc_manifest = { 
-			id="ApplesandBananas",
+			id="FleshBoard",
 			setRlyA={ s="setBool", desc= "red LED" },
 			setRlyB={ s="setBool", desc= "green LED" },
 			setRlyC={ s="setBool", desc= "blue LED" },
@@ -86,6 +87,7 @@ end
 
 	function log_service(m, from, port)
 		local id = m.id
+		print(id)
 		if services_heard[id] then
 			services_heard[id].last_heard = storm.os.now(storm.os.SHIFT_0)
 			return
@@ -143,12 +145,14 @@ end
 			local id = params.setInt
 			if id <= 12 or id > 0 then 
 			  	print("Setting color and sound between 1-12", id)
+				goto_id(id)
 			else 
 				print("Invalid sound selection, 1-12 please") 
 			end  
 			-- Actually need to handle params
 		elseif service == "turnOffFP" then
 			print("Turning off FP")
+		 	goto_id(0)
 		end
 	end
 
@@ -226,8 +230,9 @@ function init()
 		-- end)
 	
 
-	run_service_print()
+	run_service_print()	
 	run_cleaning_service()
+	goto_id(7)
 	cord.enter_loop()
 end
 
