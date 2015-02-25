@@ -35,6 +35,7 @@ function REG:w(reg, value)
     arr:set(1,reg)
     arr:set(2, value)
     local rv = cord.await(storm.i2c.write, self.port + self.address, storm.i2c.START + storm.i2c.STOP, arr)
+<<<<<<< HEAD
     return rv
 end
 
@@ -49,6 +50,12 @@ function REG:w16(reg, value1, value2)
     arr:set(3, value2)
     local rv = cord.await(storm.i2c.write, self.port + self.address, storm.i2c.START + storm.i2c.STOP, arr)
     return rv
+=======
+    if (rv ~= storm.i2c.OK) then
+        print ("ERROR ON I2C: ",rv)
+    end
+    return 1
+>>>>>>> d2f7de8428d1a0ef6d729e0671f624a0a17f7e8a
 end
 
 return REG

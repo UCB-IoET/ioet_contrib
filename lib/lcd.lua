@@ -103,7 +103,11 @@ function LCD:init(lines, dotsize)
             cord.await(storm.os.invokeLater, 50*storm.os.MILLISECOND)
             self:command(0x6)
             cord.await(storm.os.invokeLater, 200*storm.os.MILLISECOND)
+<<<<<<< HEAD
             self._dc  = codes.LCD_DISPLAYON --+codes.LCD_CURSORON + codes.LCD_BLINKON
+=======
+            self._dc  = codes.LCD_DISPLAYON + codes.LCD_CURSORON + codes.LCD_BLINKON
+>>>>>>> d2f7de8428d1a0ef6d729e0671f624a0a17f7e8a
             self:display()
             cord.await(storm.os.invokeLater, 50*storm.os.MILLISECOND)
             
@@ -133,7 +137,11 @@ end
 -- Erases the screen. --
 function LCD:clear()
     self:command(codes.LCD_CLEARDISPLAY)
+<<<<<<< HEAD
     cord:await(storm.os.invokeLater, 50*storm.os.MILLISECOND)
+=======
+    cord:await(storm.os.invokeLater, 2*storm.os.MILLISECOND)
+>>>>>>> d2f7de8428d1a0ef6d729e0671f624a0a17f7e8a
 end
 
 -- Writes a string to the LCD display at the cursor. --
@@ -141,9 +149,13 @@ function LCD:writeString(str)
     local i
     for i = 1, #str do
         self:write(string.byte(str:sub(i, i)))
+<<<<<<< HEAD
 	if i == 16 then self:setCursor(1,0) end
     end
     self:setCursor(0,0)
+=======
+    end
+>>>>>>> d2f7de8428d1a0ef6d729e0671f624a0a17f7e8a
 end
 
 --[[ Sets the color of the RGB backlight. RED, GREEN, and BLUE
