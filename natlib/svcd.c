@@ -8,90 +8,77 @@
 static int svcd_add_service( lua_State *L ) {
 
     //TODO: Garbage collection?
-    //Get param 1 from top of stack
-    char * svc_id = (char *) luaL_checkstring(L, 1);
 
     lua_getglobal(L, "SVCD");
 
     lua_pushstring(L, "blsmap");
     lua_gettable(L, 2);
-    lua_pushstring(L, svc_id);
+    lua_pushvalue(L, 1); //svc_id @ index 4
     lua_pushlightfunction(L, libstorm_bl_addservice);
-    lua_pushstring(L, svc_id);
+    lua_pushvalue(L, 1); //svc_id @ index 6
     lua_call(L, 1, 1);
     lua_settable(L, 3);
 
     lua_pushstring(L, "blamap");
     lua_gettable(L, 2);
-    lua_pushstring(L, svc_id);
+    lua_pushvalue(L, 1); //svc_id @ index 5
     lua_newtable(L);
-    lua_settable(L, 3);
+    lua_settable(L, 4);
 
     lua_pushstring(L, "manifest");
     lua_gettable(L, 2);
-    lua_pushstring(L, svc_id);
+    lua_pushvalue(L, 1); //svc_id @ index 6
     lua_newtable(L);
-    lua_settable(L, 3);
+    lua_settable(L, 5);
 
     lua_pushstring(L, "manifest_map");
     lua_gettable(L, 2);
-    lua_pushstring(L, svc_id);
+    lua_pushvalue(L, 1); //svc_id @ index 7
     lua_newtable(L);
-    lua_settable(L, 3);
+    lua_settable(L, 6);
 
     return 0;
 }
 
 // Lua: storm.n.svcd_add_attribute ( svc_id, attr_id, write_fn )
 // Add a new attribute to a service in the service daemon
-static void svcd_add_attribute( lua_State *L ) {
+static int svcd_add_attribute( lua_State *L ) {
 
-    //Get param 1 from top of stack
-    char * svc_id = (char *) luaL_checkstring(L, 1);
+    lua_getglobal(L, "SVCD"); //Index 4
 
-    //Get param 2 from top of stack
-    char * attr_id = (char *) luaL_checkstring(L, 2);
-
-    //Get write_fn reference and pop it off
-    int write_fn_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    lua_getglobal(L, "SVCD"); //Index 3
-
-    lua_pushstring(L, "blsmap"); //Index 4
-    lua_gettable(L, 3);
-
-    lua_pushstring(L, "blamap"); //Index 5
-    lua_gettable(L, 3);
-    lua_pushstring(L, svc_id); //Index 6
-    lua_gettable(L, 5);
-    lua_pushstring(L, attr_id); //Index 7 - key
-
-    lua_pushlightfunction(L, libstorm_bl_addcharacteristic); //Index 8
-    lua_pushstring(L, svc_id);
+    lua_pushstring(L, "blsmap"); //Index 5
     lua_gettable(L, 4);
-    lua_pushstring(L, attr_id);
-    lua_rawgeti(L, LUA_REGISTRYINDEX, write_fn_ref);
-    lua_call(L, 3, 1); //Returns at Index 8 - value
 
-    lua_settable(L, 6); //Remove index 7, 8
+    lua_pushstring(L, "blamap"); //Index 6
+    lua_gettable(L, 4);
+    lua_pushvalue(L, 1); //svc_id @ Index 7
+    lua_gettable(L, 6);
+    lua_pushvalue(L, 2); //attr_id @ Index 8 - key
 
-    lua_pushstring(L, "manifest"); //Index 7
-    lua_gettable(L, 3);
-    lua_pushstring(L, svc_id); //Index 8
-    lua_gettable(L, 7);
-    int n = luaL_getn(L, 8);
-    lua_pushstring(L, attr_id); //Index 9
-    lua_rawseti(L, 8, n+1); //Index back to 8
+    lua_pushlightfunction(L, libstorm_bl_addcharacteristic); //Index 9
+    lua_pushvalue(L, 1); //svc_id @ Index 10
+    lua_gettable(L, 5);
+    lua_pushvalue(L, 2); //attr_id @ Index 11
+    lua_pushvalue(L, 3); //wrtie_fn @ Index 12
+    lua_call(L, 3, 1); //Returns at Index 9 - value
 
-    lua_pushstring(L, "manifest_map"); // Index 9
-    lua_gettable(L, 3);
-    lua_pushstring(L, svc_id); //Index 10
-    lua_gettable(L, 9);
-    lua_pushstring(L, attr_id); //Index 11
-    lua_rawgeti(L, LUA_REGISTRYINDEX, write_fn_ref); //Index 12
-    lua_settable(L, 10); //Index back to 10
+    lua_settable(L, 7); //Remove index 8, 9
 
-    luaL_unref(L, LUA_REGISTRYINDEX, write_fn_ref);
+    lua_pushstring(L, "manifest"); //Index 8
+    lua_gettable(L, 4);
+    lua_pushvalue(L, 1); //svc_id @ Index 9
+    lua_gettable(L, 8);
+    int n = luaL_getn(L, 9);
+    lua_pushvalue(L, 2); //attr_id @ Index 10
+    lua_rawseti(L, 9, n+1); //Index back to 9
+
+    lua_pushstring(L, "manifest_map"); // Index 10
+    lua_gettable(L, 4);
+    lua_pushvalue(L, 1); //svc_id @ Index 11
+    lua_gettable(L, 10);
+    lua_pushvalue(L, 2); //attr_id @ Index 12
+    lua_pushvalue(L, 3); // write_fn @ Index 13
+    lua_settable(L, 11); //Index back to 11
 
     return 0;
 }
