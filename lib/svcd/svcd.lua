@@ -100,26 +100,26 @@ SVCD.wcdispatch = function(pay, srcip, srcport)
         SVCD.handlers[ivkid] = nil
     end
 end
+SVCD.write = storm.n.svcd_write
+-- SVCD.write = function (targetip, svcid, attrid, payload, timeout_ms, on_done)
+--     print("Nonsexy write")
+--     local ivkid = SVCD.ivkid
 
-SVCD.write = function (targetip, svcid, attrid, payload, timeout_ms, on_done)
-    print("Nonsexy write")
-    local ivkid = SVCD.ivkid
+--     SVCD.ivkid = SVCD.ivkid + 1
+--     if SVCD.ivkid > 65535 then
+--         SVCD.ivkid = 0
+--     end
 
-    SVCD.ivkid = SVCD.ivkid + 1
-    if SVCD.ivkid > 65535 then
-        SVCD.ivkid = 0
-    end
-
-    SVCD.handlers[ivkid] = on_done
+--     SVCD.handlers[ivkid] = on_done
    
-    storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
-        if SVCD.handlers[ivkid] ~= nil then
-            SVCD.handlers[ivkid](SVCD.TIMEOUT)
-            SVCD.handlers[ivkid] = nil
-        end
-    end)
-    storm.net.sendto(SVCD.wcsock, storm.mp.pack({svcid, attrid, ivkid, payload}), targetip, 2526)
-end
+--     storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
+--         if SVCD.handlers[ivkid] ~= nil then
+--             SVCD.handlers[ivkid](SVCD.TIMEOUT)
+--             SVCD.handlers[ivkid] = nil
+--         end
+--     end)
+--     storm.net.sendto(SVCD.wcsock, storm.mp.pack({svcid, attrid, ivkid, payload}), targetip, 2526)
+-- end
 
 SVCD.write_invoke_later = function(ivkid, timeout_ms)
     storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
