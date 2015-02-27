@@ -173,12 +173,14 @@ static int contrib_helloX_tail(lua_State *L)
 ////////////////// BEGIN MODULE MAP /////////////////////////////
 const LUA_REG_TYPE contrib_native_map[] =
 {
+
     { LSTRKEY( "hello" ), LFUNCVAL ( contrib_hello ) },
     { LSTRKEY( "helloX" ), LFUNCVAL ( contrib_helloX_entry ) },
     { LSTRKEY( "fourth_root"), LFUNCVAL ( contrib_fourth_root_m1000 ) },
     { LSTRKEY( "run_foobar"), LFUNCVAL ( contrib_run_foobar ) },
     { LSTRKEY( "makecounter"), LFUNCVAL ( contrib_makecounter ) },
 
+    { LSTRKEY( "svcd_write"), LFUNCVAL ( svcd_write )},
     SVCD_SYMBOLS
 
     /* Constants for the Temp sensor. */

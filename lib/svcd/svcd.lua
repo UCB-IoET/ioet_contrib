@@ -102,6 +102,7 @@ SVCD.wcdispatch = function(pay, srcip, srcport)
 end
 
 SVCD.write = function (targetip, svcid, attrid, payload, timeout_ms, on_done)
+    print("Nonsexy write")
     local ivkid = SVCD.ivkid
 
     SVCD.ivkid = SVCD.ivkid + 1

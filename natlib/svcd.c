@@ -15,8 +15,7 @@
 // advert_received, which you may want to hook into
 #define MIN_OPT_LEVEL 2
 #include "lrodefs.h"
-#include "lua.h"
-#include "lauxlib.h"
+
 static const LUA_REG_TYPE svcd_meta_map[] =
 {
     { LSTRKEY( "__index" ), LROVAL ( svcd_meta_map ) },
@@ -26,11 +25,12 @@ static const LUA_REG_TYPE svcd_meta_map[] =
     { LNILKEY, LNILVAL }
 };
 
-int svcd_write( lua_State*);
+
 //////////////////////////////////////////////////////////////////////////////
 // SVCD.init() implementation
 // Maintainer: Michael Andersen <michael@steelcode.com>
 /////////////////////////////////////////////////////////////
+static int svcd_write( lua_State* L );
 
 // The anonymous func in init that allows for dynamic binding of advert_received
 static int svcd_init_adv_received( lua_State *L )
@@ -54,6 +54,7 @@ static int svcd_init_adv_received( lua_State *L )
 // Initialises the SVCD module, in global scope
 static int svcd_init( lua_State *L )
 {
+    printf("INIT SVCD\n");
     if (lua_gettop(L) != 2) return luaL_error(L, "Expected (id, onready)");
 #if SVCD_PUREC
 //If we are going for a pure C implementation, then this would create the global
@@ -211,86 +212,110 @@ void resolve_table(lua_State *L, char* key){
     lua_settop(L, -2);
 }
 
-int svcd_write( lua_State *L )
-{
-    int numargs = lua_gettop(L); // 6
+static int svcd_write( lua_State *L )
+{   
+    printf("Sexy write!\n");    
+    // int numargs = lua_gettop(L); // 6
+  
+
     
-    resolve_table(L, "ikvid"); //7
+    // // GET ALL THE ARGS
+    // size_t g;
+    // const char* targetip = (char*) lua_tolstring(L, 1, &g);
+    // int svcid = (int)lua_tonumber(L, 2);
+    // int attrid = (int)lua_tonumber(L, 3);
+    
+    // size_t l;
+    // const char* payload =  lua_tolstring(L, 4, &l);
 
-    int ivkid = (int) lua_tonumber(L, -1);
-    lua_settop(L, numargs);
+    // int timeout_ms = (int)lua_tonumber(L, 5);
 
+   
 
-    //set it
-    ivkid =  ivkid + 1;
-    if( ivkid > 65535 ) { 
-        ivkid = 0;
-    }
+    // int on_done = (int) lua_toboolean(L, 6);
 
-    // setting ivkid
-    lua_getglobal(L, "SVCD");
-    lua_pushnumber(L, ivkid);
-    lua_settable(L, 7);
-    lua_settop(L, numargs);
+    
+
+    // resolve_table(L, "ikvid"); //7
+    // int ivkid = (int) lua_tonumber(L, -1);
+    // lua_settop(L, numargs);
+    
+
+    // //set it
+    // ivkid =  ivkid + 1;
+    // if( ivkid > 65535 ) { 
+    //     ivkid = 0;
+    // }
+
+    // // setting ivkid
+    // lua_getglobal(L, "SVCD");
+    // lua_pushnumber(L, ivkid);
+    // lua_settable(L, 7);
+    // lua_settop(L, numargs);
  
-    // SVCD.handlers[ivkid]
-    resolve_table(L, "handlers"); // 7
-    lua_pushnumber(L, ivkid);
-    lua_gettable(L, 7);
-    // SVCD.handlers[ivkid] is at 8
+    // // SVCD.handlers[ivkid]
+    // resolve_table(L, "handlers"); // 7
+    // lua_pushnumber(L, ivkid);
+    // lua_gettable(L, 7);
+    // // SVCD.handlers[ivkid] is at 8
 
-    lua_pushnumber(L, 0); // temp number at 9
-    lua_copy(L, 6, 9); // set ondone to temp number location
-    lua_settable(L, 8);
-    //nothing above 8
+    // // lua_pushnumber(L, 0); // temp number at 9
+    // // lua_copy(L, 6, 9); // set ondone to temp number location
+    // lua_pushboolean(L, on_done);
+    // lua_settable(L, 8);
+    // //nothing above 8
     
-    resolve_table(L, "write_invoke_later"); // 9
-     //function write invoke later 
-        lua_pushnumber(L, ivkid);  // 10
-        // timeout
-        lua_pushnumber(L, 0); //11
-        lua_copy(L, 5, 11);
-        lua_call(L, 2, 0);
+    // resolve_table(L, "write_invoke_later"); // 9
+    //  //function write invoke later 
+    //     lua_pushnumber(L, ivkid);  // 10
+    //     // timeout
+    //     // lua_pushnumber(L, 0); //11
+    //     // lua_copy(L, 5, 11);
+    //     lua_pushnumber(L, timeout_ms);
+    //     lua_call(L, 2, 0);
 
 
 
-    //position 11 with nothing on the top
-    lua_pushlightfunction(L, libstorm_net_sendto); // 10
+    // //position 11 with nothing on the top
+    // lua_pushlightfunction(L, libstorm_net_sendto); // 10
         
-        resolve_table(L, "wcsock"); //11
+    //     resolve_table(L, "wcsock"); //11
 
-        lua_pushlightfunction(L, libmsgpack_mp_pack);//12
-            //making stormmppack param
-            lua_newtable(L); //13
-            lua_pushnumber(L, 0); // temp /14
-            //svcid
-            lua_copy(L, 2, -1);
-            lua_setfield(L, -2, "1");
-            //attrid
-            lua_pushnumber(L, 0); // 14
-            lua_copy(L, 3, -1);
-            lua_setfield(L, -2, "2");
-            // ivkid
-            lua_pushnumber(L, ivkid); //14
-            lua_setfield(L, -2, "3");
-            //payload
-            // size_t l; 
-            // const char* payload =  lua_tolstring(L, 4, &l);
-            //possible place where it is clearing the whole stack
-            // lua_pushlstring(L, payload, l);
-            lua_pushlstring(L, "", 0); //14
-            lua_copy(L, 4, 14);
-            lua_setfield(L, -2, "4");
-        lua_call(L, 2, 1);
-        /* END OF MSG PACK FUNCTION */
+    //     lua_pushlightfunction(L, libmsgpack_mp_pack);//12
+    //         //making stormmppack param
+    //         lua_newtable(L); //13
+    //         // lua_pushnumber(L, 0); // temp /14
+    //         //svcid
+    //         // lua_copy(L, 2, -1);
+    //         lua_pushnumber(L, svcid);
+    //         lua_setfield(L, -2, "1");
+    //         //attrid
+    //         lua_pushnumber(L, 0); // 14
+    //         // lua_copy(L, 3, -1);
+    //         // lua_setfield(L, -2, "2");
+    //         lua_pushnumber(L, attrid);
+    //         // ivkid
+    //         lua_pushnumber(L, ivkid); //14
+    //         lua_setfield(L, -2, "3");
+    //         //payload
+    //         // size_t l; 
+    //         // const char* payload =  lua_tolstring(L, 4, &l);
+    //         //possible place where it is clearing the whole stack
+    //         lua_pushlstring(L, payload, l);
+    //         // lua_pushlstring(L, "", 0); //14
+    //         // lua_copy(L, 4, 14);
+    //         lua_setfield(L, -2, "4");
+    //     lua_call(L, 2, 1);
+    //     /* END OF MSG PACK FUNCTION */
 
-        // targetip    
-        lua_pushnumber(L, 0);
-        lua_copy(L, 1, 13);
-        //2526
-        lua_pushnumber(L, 2526); //14
+    //     // targetip    
+    //     // lua_pushnumber(L, 0);
+    //     // lua_copy(L, 1, 13);
+    //     lua_pushlstring(L, targetip, g);
+    //     //2526
+    //     lua_pushnumber(L, 2526); //14
     
-    lua_call(L, 4, 1);
+    // lua_call(L, 4, 1);
 
     return 0; //return # of arguments
 }
