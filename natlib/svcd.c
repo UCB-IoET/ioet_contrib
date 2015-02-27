@@ -219,7 +219,6 @@ static int svcd_write( lua_State *L )
     int numargs = lua_gettop(L); // 6
   
 
-    
     // GET ALL THE ARGS
     size_t g;
     const char* targetip = (char*) lua_tolstring(L, 1, &g);
@@ -230,41 +229,49 @@ static int svcd_write( lua_State *L )
     const char* payload =  lua_tolstring(L, 4, &l);
 
     int timeout_ms = (int)lua_tonumber(L, 5);
-
-   
-
-    int on_done = (int) lua_toboolean(L, 6);
-
+    int on_done = (int) lua_tonumber(L, 6);
+     /* PARAMS */
+    printf("Params (%i) received ip:%s, svc: 0x%x, attr: 0x%x, payload:%s, ondone= 0x%x \n", numargs, targetip, svcid, attrid, payload, on_done);
+    printf("Get ivkid \n");
     
-
     resolve_table(L, "ikvid"); //7
     int ivkid = (int) lua_tonumber(L, -1);
-    lua_settop(L, numargs);
+   
     
-
+    printf("IVKID: %i\n", ivkid);
     //set it
     ivkid =  ivkid + 1;
     if( ivkid > 65535 ) { 
         ivkid = 0;
     }
 
+    lua_settop(L, numargs);
+
+    /* SET IVKID */
+    printf("Updating ikvid to %i\n", ivkid);
     // setting ivkid
     lua_getglobal(L, "SVCD");
+    // lua_pushstring(L, "ikvid");
     lua_pushnumber(L, ivkid);
-    lua_settable(L, 7);
+    lua_setfield(L, -2, "ikvid");
+
+    // lua_settable(L, 7);
     lua_settop(L, numargs);
  
+  /* SET HANDLER */
+    printf("Setting handler\n");
     // SVCD.handlers[ivkid]
     resolve_table(L, "handlers"); // 7
-    lua_pushnumber(L, ivkid);
-    lua_gettable(L, 7);
-    // SVCD.handlers[ivkid] is at 8
+    printf("Resolved handlers\n");
 
-    // lua_pushnumber(L, 0); // temp number at 9
-    // lua_copy(L, 6, 9); // set ondone to temp number location
-    lua_pushboolean(L, on_done);
-    lua_settable(L, 8);
-    //nothing above 8
+    lua_pushnumber(L, ivkid);
+    printf("Resolved ikvid handler\n");
+    lua_pushnumber(L, on_done);
+    lua_settable(L, -3);
+    
+
+    /* INVOKE LATE */
+    printf("Setting up invoke later \n");
     
     resolve_table(L, "write_invoke_later"); // 9
      //function write invoke later 
@@ -273,50 +280,57 @@ static int svcd_write( lua_State *L )
         // lua_pushnumber(L, 0); //11
         // lua_copy(L, 5, 11);
         lua_pushnumber(L, timeout_ms);
+        printf("Calling invoke later \n");
         lua_call(L, 2, 0);
 
 
 
+    /* SEND TO */
     //position 11 with nothing on the top
+    printf("Setting up sendto \n");
     lua_pushlightfunction(L, libstorm_net_sendto); // 10
-        
+    // resolve_table(L, "print_sendto"); // 9
         resolve_table(L, "wcsock"); //11
 
+        printf("Setting up msg_pack array \n");
         lua_pushlightfunction(L, libmsgpack_mp_pack);//12
             //making stormmppack param
             lua_newtable(L); //13
-            // lua_pushnumber(L, 0); // temp /14
             //svcid
-            // lua_copy(L, 2, -1);
+            lua_pushnumber(L, 1);
             lua_pushnumber(L, svcid);
-            lua_setfield(L, -2, "1");
+            lua_settable(L, -3);
+            printf("Appending svcid %i\n", svcid);
             //attrid
-            lua_pushnumber(L, 0); // 14
-            // lua_copy(L, 3, -1);
-            // lua_setfield(L, -2, "2");
+            lua_pushnumber(L, 2);
             lua_pushnumber(L, attrid);
+            lua_settable(L, -3);
+            printf("Appending attrid %i\n", attrid);
+
             // ivkid
+            lua_pushnumber(L, 3);
             lua_pushnumber(L, ivkid); //14
-            lua_setfield(L, -2, "3");
+            lua_settable(L, -3);
+            printf("Appending ivkid %i\n", ivkid);
+
             //payload
-            // size_t l; 
-            // const char* payload =  lua_tolstring(L, 4, &l);
-            //possible place where it is clearing the whole stack
+            lua_pushnumber(L, 4);
             lua_pushlstring(L, payload, l);
-            // lua_pushlstring(L, "", 0); //14
-            // lua_copy(L, 4, 14);
-            lua_setfield(L, -2, "4");
-        lua_call(L, 2, 1);
+            lua_settable(L, -3);
+            printf("Appending payload %s\n", payload);
+
+        printf("Calling msg_pack \n");
+        lua_call(L, 1, 1);
+
         /* END OF MSG PACK FUNCTION */
 
         // targetip    
-        // lua_pushnumber(L, 0);
-        // lua_copy(L, 1, 13);
         lua_pushlstring(L, targetip, g);
         //2526
-        lua_pushnumber(L, 2526); //14
-    
-    lua_call(L, 4, 1);
+        lua_pushnumber(L, 2526);
+
+    printf("Calling sendto\n");
+    lua_call(L, 4, 0);
 
     return 0; //return # of arguments
 }

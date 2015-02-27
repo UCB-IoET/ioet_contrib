@@ -120,7 +120,15 @@ SVCD.write = storm.n.svcd_write
 --     end)
 --     storm.net.sendto(SVCD.wcsock, storm.mp.pack({svcid, attrid, ivkid, payload}), targetip, 2526)
 -- end
-
+SVCD.print_sendto = function(payload)
+    -- print("sock", sock, "ip", ip, "port", port)
+    local t = storm.mp.unpack(payload); 
+    local svc_id = t[1]
+    local attr_id = t[2]
+    local ivk_id = t[3]
+    local payload = t[4]
+    print(svc_id, attr_id, ivk_id, payload);   
+end
 SVCD.write_invoke_later = function(ivkid, timeout_ms)
     storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
         if SVCD.handlers[ivkid] ~= nil then
