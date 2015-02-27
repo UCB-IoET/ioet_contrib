@@ -22,10 +22,10 @@ local CLEANING_PERIOD = 5 * storm.os.SECOND
 local svc_manifest = { 
 			id="FleshBoard",
 			setRlyA={ s="setBool", desc= "red LED" },
-			setRlyB={ s="setBool", desc= "green LED" },
-			setRlyC={ s="setBool", desc= "blue LED" },
-			setFPColorSound={s="setInt", desc = "Turn on light soundcombo with a number between 1 and 7"},
-			turnOffFP={s = "setBool", desc = "Turn off the sound"}	
+			-- setRlyB={ s="setBool", desc= "green LED" },
+			-- setRlyC={ s="setBool", desc= "blue LED" },
+			-- setFPColorSound={s="setInt", desc = "Turn on light soundcombo with a number between 1 and 7"},
+			-- turnOffFP={s = "setBool", desc = "Turn off the sound"}	
 			--getTime={ s="", desc="get my time"}
 	   }
 
