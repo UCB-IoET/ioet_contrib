@@ -191,7 +191,7 @@ static int svcd_init( lua_State *L )
 //                        number timeout_ms, lightfunction on_done)) 
 // Authors: Aparna Dhinakaran, David Ho, Romi Phadte, Cesar Torres
 /////////////////////////////////////////////////////////////
-static int svcd_init_adv_received( lua_State *L )
+int svcd_write( lua_State *L )
 {
     //Get parameters from the top of stack
         
