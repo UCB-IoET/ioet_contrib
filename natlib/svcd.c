@@ -185,3 +185,57 @@ static int svcd_init( lua_State *L )
 
     return 0;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// SVCD.write((string targetip, number svcid, number attrid, lightfunction payload, 
+//                        number timeout_ms, lightfunction on_done)) 
+// Authors: Aparna Dhinakaran, David Ho, Romi Phadte, Cesar Torres
+/////////////////////////////////////////////////////////////
+static int svcd_init_adv_received( lua_State *L )
+{
+    //Get parameters from the top of stack
+        
+    // int targettip = (int) luaL_checknumber(L, 1);
+    // int svcid = (int) luaL_checknumber(L, 2);
+    // int attrid = (int) luaL_checknumber(L, 3);
+    // char* payload = (int) luaL_checknumber(L, 4);
+    // int timeout_ms = (int) luaL_checknumber(L, 5);
+    // char* on_done = (int) luaL_checknumber(L, 6);
+
+
+
+    // GET ivkid - local ivkid = SVCD.ivkid
+    int ikvid = (int) lua_getglobal(L, "ikvid"); 
+
+  
+
+    //     if SVCD.ivkid > 65535 then
+    //         SVCD.ivkid = 0
+    //     end
+
+    if(ikvid + 1 > 65535) { ikvid = 0;}
+
+      // SET ivkid +1 -  SVCD.ivkid = SVCD.ivkid + 1
+    // ? is there a setglobal function
+    lua.pushvalue(L, ikvid + 1)
+    lua.setglobal(L, "ikvid");
+
+
+    //     SVCD.handlers[ivkid] = on_done
+    //     storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
+    //         if SVCD.handlers[ivkid] ~= nil then
+    //             SVCD.handlers[ivkid](SVCD.TIMEOUT)
+    //             SVCD.handlers[ivkid] = nil
+    //         end
+    //     end)
+    //     storm.net.sendto(SVCD.wcsock, storm.mp.pack({svcid, attrid, ivkid, payload}), targetip, 2526)
+
+    // call to C function
+
+    //push back return values
+    lua_pushnumber(L, (int)(guess*1000));
+    return 1; //return # of arguments
+}
+
+
+
