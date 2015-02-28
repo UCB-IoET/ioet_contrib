@@ -173,6 +173,7 @@ static int contrib_helloX_tail(lua_State *L)
 ////////////////// BEGIN MODULE MAP /////////////////////////////
 const LUA_REG_TYPE contrib_native_map[] =
 {
+
     { LSTRKEY( "hello" ), LFUNCVAL ( contrib_hello ) },
     { LSTRKEY( "helloX" ), LFUNCVAL ( contrib_helloX_entry ) },
     { LSTRKEY( "fourth_root"), LFUNCVAL ( contrib_fourth_root_m1000 ) },

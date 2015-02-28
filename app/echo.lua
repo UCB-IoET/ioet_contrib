@@ -1,3 +1,4 @@
+
 --[[
    echo client as server
    currently set up so you should start one or another functionality at the
@@ -26,13 +27,15 @@ cport = 49152
 
 -- create echo server as handler
 server = function()
-   ssock = storm.net.udpsocket(7, 
-			       function(payload, from, port)
-				  brd:flash(1)
-				  print (string.format("from %s port %d: %s",from,port,payload))
-				  print(storm.net.sendto(ssock, payload, from, cport))
-				  brd:flash(1)
-			       end)
+   sock = storm.net.udpsocket(17, 
+			      function(payload, from, port)
+				 brd:flash(1)
+				 print (string.format("from %s port %d: %s",from,port,payload))
+-- client should be able to listen on the port that this arrives on
+-- print(storm.net.sendto(sock, payload, from, port))
+				 print(storm.net.sendto(sock, payload, from, 7))
+				 brd:flash(1)
+			      end)
 end
 
 server()			-- every node runs the echo server
@@ -57,7 +60,7 @@ client = function()
    local msg = string.format("0x%04x says count=%d", storm.os.nodeid(), count)
    print("send:", msg)
    -- send upd echo to link local all nodes multicast
-   storm.net.sendto(csock, msg, "ff02::1", 7) 
+   storm.net.sendto(csock, msg, "ff02::1",17) 
    count = count + 1
    grn:flash(1)
 end

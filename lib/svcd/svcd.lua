@@ -100,21 +100,42 @@ SVCD.wcdispatch = function(pay, srcip, srcport)
         SVCD.handlers[ivkid] = nil
     end
 end
+SVCD.write = storm.n.svcd_write
+-- SVCD.write = function (targetip, svcid, attrid, payload, timeout_ms, on_done)
+--     print("Nonsexy write")
+--     local ivkid = SVCD.ivkid
 
-SVCD.write = function (targetip, svcid, attrid, payload, timeout_ms, on_done)
-    local ivkid = SVCD.ivkid
-    SVCD.ivkid = SVCD.ivkid + 1
-    if SVCD.ivkid > 65535 then
-        SVCD.ivkid = 0
-    end
-    SVCD.handlers[ivkid] = on_done
+--     SVCD.ivkid = SVCD.ivkid + 1
+--     if SVCD.ivkid > 65535 then
+--         SVCD.ivkid = 0
+--     end
+
+--     SVCD.handlers[ivkid] = on_done
+   
+--     storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
+--         if SVCD.handlers[ivkid] ~= nil then
+--             SVCD.handlers[ivkid](SVCD.TIMEOUT)
+--             SVCD.handlers[ivkid] = nil
+--         end
+--     end)
+--     storm.net.sendto(SVCD.wcsock, storm.mp.pack({svcid, attrid, ivkid, payload}), targetip, 2526)
+-- end
+SVCD.print_sendto = function(sock, payload, ip, port)
+    print("sock", sock, "ip", ip, "port", port)
+    local t = storm.mp.unpack(payload); 
+    local svc_id = t[1]
+    local attr_id = t[2]
+    local ivk_id = t[3]
+    local msg = t[4]
+    print(svc_id, attr_id, ivk_id, msg);   
+end
+SVCD.write_invoke_later = function(ivkid, timeout_ms)
     storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
         if SVCD.handlers[ivkid] ~= nil then
             SVCD.handlers[ivkid](SVCD.TIMEOUT)
             SVCD.handlers[ivkid] = nil
         end
     end)
-    storm.net.sendto(SVCD.wcsock, storm.mp.pack({svcid, attrid, ivkid, payload}), targetip, 2526)
 end
 
 -- Add a new service to the service daemon

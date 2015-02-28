@@ -6,7 +6,7 @@ sh.start()
 require "svcd"
 
 flashers = {}
-
+ 
 cord.new(function()
     cord.await(SVCD.init, "ledclient")
     SVCD.advert_received = function(pay, srcip, srcport)
@@ -53,6 +53,8 @@ function get_motd(serial)
         print ("Got MOTD: ",arr:get_pstring(0))
     end)
 end
+
+-- SVCD.write("fe80::212:6d02:0:304d", 0x3003, 0x4005, "goats", 300);
 
 cord.enter_loop()
 
