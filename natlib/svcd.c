@@ -185,3 +185,68 @@ static int svcd_init( lua_State *L )
 
     return 0;
 }
+
+static int svcd_unsubscribe( lua_State *L )
+{
+    // check number of args	
+    if (lua_gettop(L) != 4) return luaL_error(L, "Expected (targetip, svcid, attrid, ivkid)");
+    
+    uint16_t svcid = lua_tonumber(L, 2);
+    uint16_t attrid = lua_tonumber(L, 3);
+    uint16_t ivkid = lua_tonumber(L, 4);
+    // set array to var msg
+    
+    lua_getglobal(L, "SVCD"); //index 5
+    lua_pushstring(L, "msg");
+    storm_array_nc_create(L, 7, ARR_TYPE_UINT8);
+
+    //set oursubs of ivkid to nil
+    lua_pushstring(L, "oursubs");
+    lua_gettable(L, 5); 
+    lua_pushvalue(L, 2); //svc_id @ index ?
+    lua_pushnil(L); //set equal to nil?
+    lua_settable(L, 5);
+
+    //set first byte to 0
+    lua_pushlightfunction(L, arr_set);
+    lua_pushstring(L, "msg");
+    lua_pushnumber(L, 1);
+    lua_pushnumber(L, 0);
+    lua_call(L, 3, 0);
+
+    //set bytes
+    lua_pushlightfunction(L, arr_set_as);
+    lua_pushstring(L, "msg");
+    lua_pushnumber(L, ARR_TYPE_UINT16);
+    lua_pushnumber(L, 1);
+    lua_pushnumber(L, svcid);
+    lua_call(L, 4, 0);
+    //set bytes
+    
+    lua_pushlightfunction(L, arr_set_as);
+    lua_pushstring(L, "msg");
+    lua_pushnumber(L, ARR_TYPE_UINT16);
+    lua_pushnumber(L, 3);
+    lua_pushnumber(L, attrid);
+    lua_call(L, 4, 0);
+    //set bytes
+    
+    lua_pushlightfunction(L, arr_set_as);
+    lua_pushstring(L, "msg");
+    lua_pushnumber(L, ARR_TYPE_UINT16);
+    lua_pushnumber(L, 1);
+    lua_pushnumber(L, ivkid);
+    lua_call(L, 4, 0);
+
+    //send msg over socket
+    lua_pushlightfunction(L, libstorm_net_sendto);
+    lua_pushstring(L, "ncsock");
+    lua_gettable(L, 5);
+    //msg as str
+    lua_pushlightfunction(L, arr_as_str);
+    lua_pushstring(L, "msg");
+    lua_call(L, 1, 0);
+    lua_pushvalue(L, 1);
+    lua_pushnumber(L, 2530);
+    lua_call(L, 4, 0);
+}
