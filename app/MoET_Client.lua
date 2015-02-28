@@ -7,6 +7,8 @@
 
 require "cord" -- scheduler / fiber library
 LED = require("led")
+acc = require("acc")
+--TMP = require("tmp")
 brd = LED:new("GP0")
 
 Button = require("button")
@@ -19,6 +21,18 @@ red = LED:new("D4")
 
 print("echo test")
 brd:flash(4)
+
+buttonType = 0
+
+cord.new(function()
+   accel = acc:new()
+   accel:init()
+end)
+
+--[[cord.new(function()
+   tmp = TMP:new()
+   tmp:init()
+end)]]--
 
 ipaddr = storm.os.getipaddr()
 ipaddrs = string.format("%02x%02x:%02x%02x:%02x%02x:%02x%02x::%02x%02x:%02x%02x:%02x%02x:%02x%02x",
@@ -57,15 +71,16 @@ csock = storm.net.udpsocket(cport,
 -- send echo on each button press
 clientNetwork = function()
    buttonType = 0
-   count = 0
+   --count = 0
+   blu:flash(1)
    while buttonType == 0 do
-      blu:flash(1)
       --local msg = string.format("0x%04x says count=%d", storm.os.nodeid(), count)
-      local msg = string.format("%d", count)
-      print("1:", msg)
+      local msg = string.format("1:%d", count)
+      print(msg)
       -- send upd echo to link local all nodes multicast
       storm.net.sendto(csock, msg, "ff02::1",7) 
       count = count + 1
+      cord.await(storm.os.invokeLater, 5*storm.os.MILLISECOND)
    end
    --grn:flash(1)
 end
@@ -73,42 +88,51 @@ end
 -- send echo on each button press
 clientAccelerometer = function()
    buttonType = 1
+   count = 0
+   red:flash(1)
    while buttonType == 1 do
       blu:flash(1)
-      local msg = string.format("accelerometer")
-      print("2:", msg)
+      ax, ay, az, mx, my, mz = accel:get()
+      local msg = string.format("2:%d %d %d", ax, ay, az)
+      print(msg)
       -- send upd echo to link local all nodes multicast
       storm.net.sendto(csock, msg, "ff02::1",7) 
+      cord.await(storm.os.invokeLater, 5*storm.os.MILLISECOND)
    end
-   grn:flash(1)
 end
 
 -- send echo on each button press
-clientMagnetometer = function()
+clientTemperature = function()
+   buttonType = 2
+   count = 0
    grn:flash(1)
-   local msg = string.format("magnetometer")
-   print("3:", msg)
-   -- send upd echo to link local all nodes multicast
-   storm.net.sendto(csock, msg, "ff02::1",7) 
-   grn:flash(1)
+   while buttonType == 2 do
+      --temp = tmp:getTemp()
+      temp = 0
+      local msg = string.format("3:%d", temp)
+      print(msg)
+      -- send upd echo to link local all nodes multicast
+      storm.net.sendto(csock, msg, "ff02::1",7) 
+      cord.await(storm.os.invokeLater, 5*storm.os.MILLISECOND)
+   end
 end
 
 -- button press runs client
 btn1:whenever("RISING",function() 
 		print("Run client Network")
-		clientNetwork() 
+                cord.new(function() clientNetwork() end)
 		      end)
 
 -- button press runs client
 btn2:whenever("RISING",function() 
 		print("Run client Accelerometer")
-		clientAccelerometer() 
+                cord.new(function() clientAccelerometer() end)
 		      end)
 
 -- button press runs client
 btn3:whenever("RISING",function() 
 		print("Run client Gyroscope")
-		clientMagnetometer() 
+                cord.new(function() clientTemperature() end)
 		      end)
 -- enable a shell
 sh = require "stormsh"
