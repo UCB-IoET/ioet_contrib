@@ -213,12 +213,74 @@ void resolve_table(lua_State *L, char* key){
     lua_settop(L, -2);
 }
 
+static int svcd_write_invoke_later(lua_State *L);
+static int svcd_callback_handler(lua_State *L);
+static int anon_function(lua_State *L);
+
+static int svcd_callback_handler(lua_State *L){
+    int ivkd = (int) lua_tonumber(L, lua_upvalueindex(1));
+    printf("making callback function using ivkd = %i \n", ivkd);
+
+    resolve_table(L, "TIMEOUT");
+    int timeout = (int) lua_tonumber(L, -1);
+
+    resolve_table(L, "handlers"); // 7
+    lua_pushnumber(L, ivkd);
+    lua_gettable(L, -2);
+
+    int isnil = (int) lua_toboolean(L, -1);
+    if(isnil != 0){
+        lua_pushnumber(L, timeout);
+        lua_call(L, 1, 0);
+
+        resolve_table(L, "handlers"); // 7
+        lua_pushnumber(L, ivkd);
+        lua_pushnil(L);
+        lua_settable(L, -3);
+    }
+    return 0;
+}
+static int anon_function(lua_State *L){
+    int ivkd = (int)lua_tonumber(L, 1);
+    printf("making anon function using ivkd = %i \n", ivkd);
+
+    lua_pushnumber(L, ivkd);
+    lua_pushcclosure(L, &svcd_callback_handler, 0);
+    return 1;
+}
+
+// write 
+static int svcd_write_invoke_later(lua_State *L){
+    int ivkd = (int)lua_tonumber(L, 1);
+    int timeout_ms = (int)lua_tonumber(L, 2);
+    lua_pushlightfunction(L, libstorm_os_invoke_later);
+    lua_pushnumber(L, timeout_ms * MILLISECOND_TICKS);
+    
+    printf("making custom anon funtion\n");
+    // lua_pushlightfunction(L, anon_function);
+    lua_getglobal(L, "anon_function");
+        lua_pushnumber(L, ivkd);
+        lua_call(L, 0, 1);
+    printf("made custom anon funtion\n");
+
+    lua_call(L, 2, 0);
+    return 0;
+}
+
 static int svcd_write( lua_State *L )
 {   
+    // REGISTER CLUA FUNCTIONS IN GLOBAL SPACE
+    // lua_pushcfunction(L, svcd_write_invoke_later);
+    // lua_setglobal(L, "svcd_write_invoke_later");
+    // lua_pushcfunction(L, anon_function);
+    // lua_setglobal(L, "anon_function");
+    // lua_pushcfunction(L, svcd_callback_handler);
+    // lua_setglobal(L, "svcd_callback_handler");
+    // END REGISTER
+
     printf("Sexy write!\n");    
     int numargs = lua_gettop(L); // 6
   
-
     // GET ALL THE ARGS
     size_t g;
     const char* targetip = (char*) lua_tolstring(L, 1, &g);
@@ -229,17 +291,16 @@ static int svcd_write( lua_State *L )
     const char* payload =  lua_tolstring(L, 4, &l);
 
     int timeout_ms = (int)lua_tonumber(L, 5);
-    int on_done = (int) lua_tonumber(L, 6);
+    int* on_done = (int*) lua_tonumber(L, 6);
      /* PARAMS */
     printf("Params (%i) received ip:%s, svc: 0x%x, attr: 0x%x, payload:%s, ondone= 0x%x \n", numargs, targetip, svcid, attrid, payload, on_done);
-    printf("Get ivkid \n");
     
+    /* SET IVKID */
     resolve_table(L, "ikvid"); //7
     int ivkid = (int) lua_tonumber(L, -1);
    
-    
-    printf("IVKID: %i\n", ivkid);
-    //set it
+    printf("Getting ikvid: %i\n", ivkid);
+  
     ivkid =  ivkid + 1;
     if( ivkid > 65535 ) { 
         ivkid = 0;
@@ -247,71 +308,73 @@ static int svcd_write( lua_State *L )
 
     lua_settop(L, numargs);
 
-    /* SET IVKID */
     printf("Updating ikvid to %i\n", ivkid);
     // setting ivkid
     lua_getglobal(L, "SVCD");
-    // lua_pushstring(L, "ikvid");
     lua_pushnumber(L, ivkid);
     lua_setfield(L, -2, "ikvid");
-
-    // lua_settable(L, 7);
     lua_settop(L, numargs);
+    /* END SET IVKID*/
  
-  /* SET HANDLER */
+    /* SET HANDLER */
     printf("Setting handler\n");
-    // SVCD.handlers[ivkid]
     resolve_table(L, "handlers"); // 7
     printf("Resolved handlers\n");
 
     lua_pushnumber(L, ivkid);
     printf("Resolved ikvid handler\n");
-    lua_pushnumber(L, on_done);
-    lua_settable(L, -3);
-    
+    lua_pushlightfunction(L, on_done);
 
-    /* INVOKE LATE */
+    lua_settable(L, -3);
+    /* END SET HANDLER */
+
+    /* INVOKE LATER */
     printf("Setting up invoke later \n");
     
+    /* CUSTOM WRITE INVOKE */
+    // lua_getglobal(L, "scvd_write_invoke_later");
+    // lua_pushnumber(L, ivkid);
+    // lua_pushnumber(L, timeout_ms);
+    // printf("Calling invoke later custom \n");
+    // lua_call(L, 2, 0);
+    /* END CUSTOM */
+
+    
+    /* LUA WRITE INVOKE */
     resolve_table(L, "write_invoke_later"); // 9
      //function write invoke later 
         lua_pushnumber(L, ivkid);  // 10
-        // timeout
-        // lua_pushnumber(L, 0); //11
-        // lua_copy(L, 5, 11);
         lua_pushnumber(L, timeout_ms);
         printf("Calling invoke later \n");
         lua_call(L, 2, 0);
-
+    /* END LUA WRITE INVOKE */
 
 
     /* SEND TO */
-    //position 11 with nothing on the top
     printf("Setting up sendto \n");
-    lua_pushlightfunction(L, libstorm_net_sendto); // 10
-    // resolve_table(L, "print_sendto"); // 9
-        resolve_table(L, "wcsock"); //11
-
+    lua_pushlightfunction(L, libstorm_net_sendto); 
+    // resolve_table(L, "print_sendto"); 
+        resolve_table(L, "wcsock");
+        /* BEGIN MESSAGE PACK */
         printf("Setting up msg_pack array \n");
-        lua_pushlightfunction(L, libmsgpack_mp_pack);//12
-            //making stormmppack param
-            lua_newtable(L); //13
+        lua_pushlightfunction(L, libmsgpack_mp_pack);
+            lua_newtable(L);
             //svcid
             lua_pushnumber(L, 1);
             lua_pushnumber(L, svcid);
             lua_settable(L, -3);
-            printf("Appending svcid %i\n", svcid);
+            printf("Appending svcid 0x%x\n", svcid);
             //attrid
             lua_pushnumber(L, 2);
             lua_pushnumber(L, attrid);
             lua_settable(L, -3);
-            printf("Appending attrid %i\n", attrid);
+            printf("Appending attrid 0x%x\n", attrid);
 
             // ivkid
             lua_pushnumber(L, 3);
             lua_pushnumber(L, ivkid); //14
             lua_settable(L, -3);
-            printf("Appending ivkid %i\n", ivkid);
+            printf("Appending ivkid 0x%x\n", ivkid);
 
             //payload
             lua_pushnumber(L, 4);
@@ -331,8 +394,10 @@ static int svcd_write( lua_State *L )
 
     printf("Calling sendto\n");
     lua_call(L, 4, 0);
+    /* END SEND_TO */
 
     return 0; //return # of arguments
 }
+
 
 
