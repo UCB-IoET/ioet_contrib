@@ -185,3 +185,59 @@ static int svcd_init( lua_State *L )
 
     return 0;
 }
+
+static int svcd_subscribe(lua_state* L)
+{
+    /*
+    local msg = storm.array.create(7,storm.array.UINT8)
+    local ivkid = SVCD.ivkid
+    SVCD.ivkid = SVCD.ivkid + 1
+    if SVCD.ivkid > 65535 then
+        SVCD.ivkid = 0
+    end
+    SVCD.oursubs[ivkid] = on_notify
+    msg:set(1, 1)
+    msg:set_as(storm.array.UINT16, 1, svcid)
+    msg:set_as(storm.array.UINT16, 3, attrid)
+    msg:set_as(storm.array.UINT16, 5, ivkid)
+    storm.net.sendto(SVCD.ncsock, msg:as_str(), targetip, 2530)
+    return ivkid
+    */
+    if (lua_gettop(L) != 4) return luaL_error(L, "Expected (targetip, svcid, attrid, on_notify)");
+     
+    lua_getglobal(L, "SVCD");
+    lua_getfield(L, -1, "ivkid");
+     
+    int16 ivkid = checknumber(...);
+    lua_pop(L, 1);
+    int16 new_ivkid = 0 ? invkid > 65535 : invkid + 1;
+    lua_pushnumber(L, new_ivkid);
+    lua_setfield(L, -1, "ivkid");
+     
+    lua_getfield(L, -1, "oursubs");
+    // put value on the stack
+    lua_pushvalue(L, 4); // on_notify
+    lua_seti(L, -2, ivkid);
+    lua_pop(L, 2);
+     
+     
+    lua_pushlightfunction(L, storm_net_sendto);
+     
+    lua_getglobal(L, "SVCD");
+    lua_getfield(L, -1, "ncsock");
+    lua_remove(L, -2); // remove SVCD
+     
+     
+    uint8_t msg[7];
+    msg[0] = 1;
+    ((uint16_t*) (msg+1))[0] = svcid;
+    ((uint16_t*) (msg+1))[1] = attrid;
+    ((uint16_t*) (msg+1))[2] = ivkid;
+    lua_pushlstring(L, msg, 7);
+     
+    lua_pushvalue(L, 1);
+    lua_pushnumber(L, 2530);
+    lua_call(L, 4, 0);
+    lua_pushnumber(L, ivkid);
+    return 0;
+}
