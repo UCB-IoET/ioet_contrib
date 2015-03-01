@@ -39,7 +39,9 @@ int svcd_advert_received(lua_State *L)
 	char *pay = luaL_checkstring(L, 1);
 	char *srcip = luaL_checkstring(L, 2);
 	int srcport = luaL_checknumber(L, 3);
-        int pack_result = libmsgpack_mp_unpack(L);
+	lua_pushlightfunction(L, libmsgpack_mp_unpack);      
+        lua_pushstring(L,pay); 
+	lua_call(L,1,1);	
         printf("Service advertisment %s\n", srcip);
     	lua_pushvalue(L, -1);
     	lua_pushnil(L);
