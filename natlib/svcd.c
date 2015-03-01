@@ -16,7 +16,6 @@
 // advert_received, which you may want to hook into
 #define MIN_OPT_LEVEL 2
 #include "lrodefs.h"
-
 static const LUA_REG_TYPE svcd_meta_map[] =
 {
     { LSTRKEY( "__index" ), LROVAL ( svcd_meta_map ) },
@@ -36,15 +35,15 @@ static int svcd_write( lua_State* L );
 // The anonymous func in init that allows for dynamic binding of advert_received
 static int svcd_init_adv_received( lua_State *L )
 {
-    int numargs = lua_gettop(L); // 3
+    int numargs = lua_gettop(L);
     lua_getglobal(L, "SVCD");
     lua_pushstring(L, "advert_received");
     //Get the advert_received function from the table
-    lua_gettable(L, -2); // resolved the string to the function which was a key in SVCD
+    lua_gettable(L, -2);
     //Move it to before the arguments
     lua_insert(L, 1);
     //Pop off the SVCD table
-    lua_settop(L, numargs + 1);
+    lua_settop(L, numargs+1);
     //Note that we now call this function from C, so it cannot use any cord await
     //functions. If it needs to do that sort of thing, it can spawn a new cord to do so
     lua_call(L, numargs, 0);
@@ -55,7 +54,6 @@ static int svcd_init_adv_received( lua_State *L )
 // Initialises the SVCD module, in global scope
 static int svcd_init( lua_State *L )
 {
-    printf("INIT SVCD\n");
     if (lua_gettop(L) != 2) return luaL_error(L, "Expected (id, onready)");
 #if SVCD_PUREC
 //If we are going for a pure C implementation, then this would create the global
@@ -169,8 +167,6 @@ static int svcd_init( lua_State *L )
     if (!lua_isnil(L, 1)) {
         lua_pushlightfunction(L, libstorm_os_invoke_periodically);
         lua_pushnumber(L, 3*SECOND_TICKS);
-
-
         lua_pushlightfunction(L, libstorm_net_sendto);
         lua_pushstring(L, "asock");
         lua_gettable(L, 3);
@@ -269,19 +265,11 @@ static int svcd_write_invoke_later(lua_State *L){
 
 static int svcd_write( lua_State *L )
 {   
-    // REGISTER CLUA FUNCTIONS IN GLOBAL SPACE
-    // lua_pushcfunction(L, svcd_write_invoke_later);
-    // lua_setglobal(L, "svcd_write_invoke_later");
-    // lua_pushcfunction(L, anon_function);
-    // lua_setglobal(L, "anon_function");
-    // lua_pushcfunction(L, svcd_callback_handler);
-    // lua_setglobal(L, "svcd_callback_handler");
-    // END REGISTER
 
     printf("Sexy write!\n");    
     int numargs = lua_gettop(L); // 6
   
-    // GET ALL THE ARGS
+    /* GET ALL THE ARGS */
     size_t g;
     const char* targetip = (char*) lua_tolstring(L, 1, &g);
     int svcid = (int)lua_tonumber(L, 2);
@@ -292,6 +280,7 @@ static int svcd_write( lua_State *L )
 
     int timeout_ms = (int)lua_tonumber(L, 5);
     int* on_done = (int*) lua_tonumber(L, 6);
+    
      /* PARAMS */
     printf("Params (%i) received ip:%s, svc: 0x%x, attr: 0x%x, payload:%s, ondone= 0x%x \n", numargs, targetip, svcid, attrid, payload, on_done);
     
