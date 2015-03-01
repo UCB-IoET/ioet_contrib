@@ -36,14 +36,22 @@ static const LUA_REG_TYPE svcd_meta_map[] =
 
 int svcd_advert_received(lua_State *L) 
 {
-	char *pay = luaL_checkstring(L, 1);
 	char *srcip = luaL_checkstring(L, 2);
+        printf("Service advertisment %s\n", srcip);
+	
+	//check if pay is nil, don't proceed if true
+	int nil_pay=lua_isnil(L,1);
+        if(nil_pay==1)
+	{
+ 		return 0;
+	}
+
+	char *pay = luaL_checkstring(L, 1);
 	int srcport = luaL_checknumber(L, 3);
 	lua_pushlightfunction(L, libmsgpack_mp_unpack);      
-        lua_pushstring(L,pay); 
+       	lua_pushstring(L,pay); 
 	lua_call(L,1,1);	
-        printf("Service advertisment %s\n", srcip);
-    	lua_pushvalue(L, -1);
+ 	lua_pushvalue(L, -1);
     	lua_pushnil(L);
     	while (lua_next(L, -2))
     	{
@@ -52,31 +60,32 @@ int svcd_advert_received(lua_State *L)
         	if (strcmp(k, "id")==0)
 		{	
         		const char *v = lua_tostring(L, -2);
-	        	printf("ID = %s\n", v);	
+	       		printf("ID = %s\n", v);	
 		}
       		else
 		{
 			unsigned int k = lua_tonumber(L,-1);
-        		printf("0x%04x:\n",k);
+       			printf("0x%04x:\n",k);
  
-	    		lua_pushvalue(L, -2);
-    			lua_pushnil(L);
+    			lua_pushvalue(L, -2);
+  			lua_pushnil(L);
     			while (lua_next(L, -2))
     			{
         			lua_pushvalue(L, -2);
         			int kk = lua_tonumber(L, -1);
         			unsigned int vv = lua_tonumber(L, -2);
-				printf("   >%d: 0x%04x\n", kk, vv);	        		      
+				printf("   >%d: 0x%04x\n", kk, vv);
 				lua_pop(L, 2);
     			}
-
-    			lua_pop(L, 1);
+    			
+			lua_pop(L, 1);
 		}	
 
-    	    lua_pop(L, 2);
+    		lua_pop(L, 2);
     	}
 
     	lua_pop(L, 1);
+	
 }
 
 // The anonymous func in init that allows for dynamic binding of advert_received
