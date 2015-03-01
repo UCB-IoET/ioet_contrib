@@ -66,7 +66,8 @@ int svcd_advert_received(lua_State *L)
         			lua_pushvalue(L, -2);
         			int kk = lua_tonumber(L, -1);
         			unsigned int vv = lua_tonumber(L, -2);
-				printf("   >%d: 0x%04x\n", kk, vv);	        		      lua_pop(L, 2);
+				printf("   >%d: 0x%04x\n", kk, vv);	        		      
+				lua_pop(L, 2);
     			}
 
     			lua_pop(L, 1);
