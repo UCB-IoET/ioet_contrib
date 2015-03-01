@@ -32,6 +32,7 @@ end
 
 LED.stop = function()
 -- configure pins to a low power state
+   storm.io.set(0,storm.io.D2,storm.io.D3,storm.io.D4,storm.io.D5)
 end
 
 -- LED color functions
@@ -48,6 +49,7 @@ end
 --    this is dull for green, but bright for read and blue
 --    assumes cord.enter_loop() is in effect to schedule filaments
 LED.flash=function(color,duration)
+<<<<<<< HEAD
    local pin = LED.pins[color] or LED.pins["red2"]
    duration = duration or 10
    storm.io.set(1,storm.io[pin])
@@ -55,6 +57,14 @@ LED.flash=function(color,duration)
 			function() 
 			   storm.io.set(0,storm.io[pin]) 
 			end)
+=======
+    if(duration == nil) then
+	duration = 10
+    end
+    
+    LED.on(color)
+    storm.os.invokeLater(duration*storm.os.MILLISECOND, function() LED.off(color) end)
+>>>>>>> 71fc0515c41f13f5292db78a1eecc54e2ed9544f
 end
 
 ----------------------------------------------
@@ -63,6 +73,7 @@ end
 ----------------------------------------------
 local Buzz = {}
 
+<<<<<<< HEAD
 Buzz.run = nil
 Buzz.go = function(delay)
    delay = delay or 0
@@ -89,6 +100,16 @@ Buzz.stop = function()
    print ("Buzz.stop")
    Buzz.run = false		-- stop Buzz.go partner
 -- configure pins to a low power state
+=======
+Buzz.buzz = "BUZ1"
+
+Buzz.go = function(delay)
+	return storm.os.invokelater(delay, storm.io.set, 1, storm.io[Buzz.buzz])
+end
+
+Buzz.stop = function()
+	storm.io.set(0, storm.io[Buzz.buzz])
+>>>>>>> 71fc0515c41f13f5292db78a1eecc54e2ed9544f
 end
 
 ----------------------------------------------
@@ -97,6 +118,7 @@ end
 ----------------------------------------------
 local Button = {}
 
+<<<<<<< HEAD
 Button.pins = {"D9","D10","D11"}
 
 Button.start = function() 
@@ -106,12 +128,22 @@ Button.start = function()
    -- enable internal resistor pullups (none on board)
    storm.io.set_pull(storm.io.PULL_UP, 
 		     storm.io.D9, storm.io.D10, storm.io.D11)
+=======
+Button.buttons = {["but1"] = "K1", ["but2"] = "K2", ["but3"] = "K3" }
+
+Button.start = function() 
+	storm.io.set_mode(storm.io.INPUT, storm.io.K1, storm.io.K2, storm.io.K3)
+>>>>>>> 71fc0515c41f13f5292db78a1eecc54e2ed9544f
 end
 
 -- Get the current state of the button
 -- can be used when poling buttons
 Button.pressed = function(button) 
+<<<<<<< HEAD
    return 1-storm.io.get(storm.io[Button.pins[button]]) 
+=======
+	return storm.io.get(storm.io[Button.buttons[button]]);
+>>>>>>> 71fc0515c41f13f5292db78a1eecc54e2ed9544f
 end
 
 -------------------
@@ -121,11 +153,13 @@ end
 --   FALLING - when a button is pressed
 --   RISING - when it is released
 --   CHANGE - either case
--- Only one transition can be in effect for a button
+-- only one transition can be in effect for a button
 -- must be used with cord.enter_loop
 -- none of these are debounced.
 -------------------
+
 Button.whenever = function(button, transition, action)
+<<<<<<< HEAD
    -- register call back to fire when button is pressed
    local pin = Button.pins[button]
    storm.io.watch_all(storm.io[transition], storm.io[pin], action)
@@ -148,6 +182,17 @@ Button.wait = function(button)
 			  storm.io.FALLING, 
 			  storm.io[pin])
 	    end)
+=======
+	return storm.io.watch_all(transition, storm.io[Button.buttons[button]], action)
+end
+
+Button.when = function(button, transition, action)
+	return storm.io.watch_single(transition, storm.io[Button.buttons[button]], action)
+end
+
+Button.wait = function(button)
+	
+>>>>>>> 71fc0515c41f13f5292db78a1eecc54e2ed9544f
 end
 
 ----------------------------------------------
