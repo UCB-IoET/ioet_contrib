@@ -51,12 +51,21 @@ int svcd_advert_received(lua_State *L)
 	lua_pushlightfunction(L, libmsgpack_mp_unpack);      
        	lua_pushstring(L,pay); 
 	lua_call(L,1,1);	
+
+        //push another reference to the table on top of the stack, so we know where it is
  	lua_pushvalue(L, -1);
-    	lua_pushnil(L);
-    	while (lua_next(L, -2))
+    	// stack now contains: -1 => table
+	lua_pushnil(L);
+	// stack now contains: -1 => nil; -2 => table	
+       
+	//outer loop: parses key value pairs of unpacked msg    	
+	while (lua_next(L, -2))
     	{
+                // stack now contains: -1 => value; -2 => key; -3 => table
         	lua_pushvalue(L, -2);
-        	const char *k = lua_tostring(L, -1);
+                // stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
+		
+		const char *k = lua_tostring(L, -1);
         	if (strcmp(k, "id")==0)
 		{	
         		const char *v = lua_tostring(L, -2);
@@ -69,6 +78,7 @@ int svcd_advert_received(lua_State *L)
  
     			lua_pushvalue(L, -2);
   			lua_pushnil(L);
+			//same comments as outer loop
     			while (lua_next(L, -2))
     			{
         			lua_pushvalue(L, -2);
@@ -81,11 +91,14 @@ int svcd_advert_received(lua_State *L)
 			lua_pop(L, 1);
 		}	
 
+		// pop value + copy of key, leaving original key
     		lua_pop(L, 2);
+		// stack now contains: -1 => key; -2 => table
     	}
-
+	// stack now contains: -1 => table (when lua_next returns 0 it pops the key but does not push anything.)
+        // Pop table
     	lua_pop(L, 1);
-	
+	// Stack is now the same as it was on entry to this function
 }
 
 // The anonymous func in init that allows for dynamic binding of advert_received
