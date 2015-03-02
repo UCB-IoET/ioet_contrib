@@ -2,7 +2,8 @@
 
 
 #define SVCD_SYMBOLS \
-    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },
+    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) }, \
+	{ LSTRKEY( "svcd_unsubscribe"), LFUNCVAL ( svcd_unsubscribe ) },
 
 
 //If this file is defining only specific functions, or if it
@@ -185,3 +186,39 @@ static int svcd_init( lua_State *L )
 
     return 0;
 }
+static int svcd_unsubscribe( lua_State *L )
+{
+    // check number of args	
+    if (lua_gettop(L) != 4) return luaL_error(L, "Expected (targetip, svcid, attrid, ivkid)");
+    
+    uint16_t svcid = lua_tonumber(L, 2);
+    uint16_t attrid = lua_tonumber(L, 3);
+    uint16_t ivkid = lua_tonumber(L, 4);
+    // set array to var msg
+    
+    lua_getglobal(L, "SVCD"); //index 5
+
+    //set oursubs of ivkid to nil
+    lua_pushstring(L, "oursubs");
+    lua_gettable(L, 5); 
+    lua_pushvalue(L, 2); //svc_id @ index ?
+    lua_pushnil(L); //set equal to nil?
+    lua_settable(L, 5);
+
+    //send msg over socket
+    lua_pushlightfunction(L, libstorm_net_sendto);
+    lua_pushstring(L, "ncsock");
+    lua_gettable(L, 5);
+    //msg as str
+    lua_pushlightfunction(L, arr_as_str);
+    uint8_t msg[8] __attribute__((aligned(2)));
+    msg[1] = 0;
+    ((uint16_t*) (msg+2))[0] = svcid;
+    ((uint16_t*) (msg+4))[0] = attrid;
+    ((uint16_t*) (msg+6))[0] = ivkid;
+    lua_pushlstring(L, msg, 7);
+    lua_pushnumber(L, 2530);
+    lua_call(L, 4, 0);
+	return 0;
+}
+
