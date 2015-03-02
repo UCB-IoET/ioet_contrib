@@ -266,7 +266,6 @@ static int svcd_write( lua_State *L )
 
 			/* SEND TO */
 			lua_pushlightfunction(L, libstorm_net_sendto); 
-			// resolve_table(L, "print_sendto"); 
 					resolve_table(L, "wcsock");
 					/* BEGIN MESSAGE PACK */
 					lua_pushlightfunction(L, libmsgpack_mp_pack);
