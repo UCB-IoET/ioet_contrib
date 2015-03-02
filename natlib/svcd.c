@@ -40,16 +40,15 @@ int svcd_advert_received(lua_State *L)
         printf("Service advertisment %s\n", srcip);
 	
 	//check if pay is nil, don't proceed if true
-	int nil_pay=lua_isnil(L,1);
-        if(nil_pay==1)
+        if(lua_isnil(L,1))
 	{
  		return 0;
 	}
 
-	char *pay = luaL_checkstring(L, 1);
 	int srcport = luaL_checknumber(L, 3);
+	
 	lua_pushlightfunction(L, libmsgpack_mp_unpack);      
-       	lua_pushstring(L,pay); 
+       	lua_pushvalue(L,1); 
 	lua_call(L,1,1);	
 
         //push another reference to the table on top of the stack, so we know where it is
@@ -74,7 +73,7 @@ int svcd_advert_received(lua_State *L)
       		else
 		{
 			unsigned int k = lua_tonumber(L,-1);
-       			printf("0x%04x:\n",k);
+       			printf(" 0x%04x:\n",k);
  
     			lua_pushvalue(L, -2);
   			lua_pushnil(L);
