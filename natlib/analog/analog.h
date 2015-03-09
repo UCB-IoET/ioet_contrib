@@ -32,7 +32,4 @@ int adcife_sample(lua_State *L);
 int adcife_init(lua_State *L);
 int adcife_new(lua_State *L);
 
-void c_adcife_init();
-int c_adcife_sample_channel(uint8_t poschan, uint8_t negchan, uint8_t gain, uint8_t resolution);
-
 #endif
