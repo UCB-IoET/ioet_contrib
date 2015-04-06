@@ -101,17 +101,51 @@ SVCD.wcdispatch = function(pay, srcip, srcport)
     end
 end
 
+-- SVCD.test = function(delay, ondone)
+--     print("Testing", delay * storm.os.SECOND, ondone)
+--     storm.os.invokeLater(delay * storm.os.SECOND, ondone)
+-- end
+
+-- Sexy write 1 375000 20008fc0
+-- Sexy write 2 750000 20008fc0
+-- Sexy write 3 1125000 20008fc0
+-- Sexy write 4 1500000 20008fc0
+
+SVCD.test = storm.n.svcd_test
+-- 
 SVCD.write = storm.n.svcd_write
 
+-- SVCD.write = function (targetip, svcid, attrid, payload, timeout_ms, on_done)
+--  print("Oops we did it again.");
+--  print(on_done);
+--     local ivkid = SVCD.ivkid
+--     SVCD.ivkid = SVCD.ivkid + 1
+--     if SVCD.ivkid > 65535 then
+--         SVCD.ivkid = 0
+--     end
+--     SVCD.handlers[ivkid] = on_done
+--     storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
+--         print("We are not worthy");
+--         if SVCD.handlers[ivkid] ~= nil then
+--              print("We are not worthy^2");
+--             SVCD.handlers[ivkid](SVCD.TIMEOUT)
+--             SVCD.handlers[ivkid] = nil
+--         end
+--     end)
+--     storm.net.sendto(SVCD.wcsock, storm.mp.pack({svcid, attrid, ivkid, payload}), targetip, 2526)
+-- end
+
 -- svcd_write c impl. temporary function -- working on anonymous function calling
-SVCD.write_invoke_later = function(ivkid, timeout_ms)
-    storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
-        if SVCD.handlers[ivkid] ~= nil then
-            SVCD.handlers[ivkid](SVCD.TIMEOUT)
-            SVCD.handlers[ivkid] = nil
-        end
-    end)
-end
+-- SVCD.write_invoke_later = function(ivkid, timeout_ms)
+--     print("We are not worthy^2");
+--     storm.os.invokeLater(timeout_ms*storm.os.MILLISECOND, function()
+--         if SVCD.handlers[ivkid] ~= nil then
+--             print("We are not worthy");
+--             SVCD.handlers[ivkid](SVCD.TIMEOUT)
+--             SVCD.handlers[ivkid] = nil
+--         end
+--     end)
+-- end
 
 
 -- Add a new service to the service daemon

@@ -3,6 +3,7 @@
 
 #define SVCD_SYMBOLS \
     { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },\ 
+    { LSTRKEY( "svcd_test"), LFUNCVAL ( svcd_test ) },\ 
     { LSTRKEY( "svcd_write"), LFUNCVAL ( svcd_write )},
 
 
@@ -195,8 +196,9 @@ static int svcd_init( lua_State *L )
 //////////////////////////////////////////////////////////////////////////////
 // SVCD.write((string targetip, number svcid, number attrid, lightfunction payload, 
 //                        number timeout_ms, lightfunction on_done)) 
-// Authors: Aparna Dhinakaran, David Ho, Romi Phadte, Cesar Torres
+// Authors: Aparna Dhinakaran, Michael Ho, Romi Phadte, Cesar Torres
 /////////////////////////////////////////////////////////////
+
 
 
 void resolve_table(lua_State *L, char* key){
@@ -208,10 +210,48 @@ void resolve_table(lua_State *L, char* key){
     lua_settop(L, -2);
 }
 
+static int svcd_test(lua_State* L){
+    int numargs = lua_gettop(L); 
+        if (numargs == 2) {
+            int timeout_ms = (int)lua_tonumber(L, 1);
+
+            lua_pushlightfunction(L, libstorm_os_invoke_later);
+            lua_pushnumber(L, timeout_ms * SECOND_TICKS);
+            lua_pushvalue(L, 2);
+            lua_call(L, 2, 0);
+        }
+    return 0;
+}
+
+
+static int timeout_func(lua_State* L){
+    int ivkid = lua_tonumber(L, lua_upvalueindex(1));
+    resolve_table(L, "TIMEOUT");
+    int timeout = lua_tonumber(L, -1);
+
+    // SVCD.handlers[ivkid] ~= nil
+    resolve_table(L, "handlers");
+    lua_pushnumber(L, ivkid);
+    lua_gettable(L, -2);
+
+    if(!lua_isnil(L, -1)){
+        lua_pushnumber(L, timeout);
+        lua_call(L, 1, 0);
+
+        resolve_table(L, "handlers");
+        lua_pushnumber(L, ivkid);
+        lua_gettable(L, -2);
+        lua_pushnil(L);
+        lua_settable(L, -2);
+    }
+    return 1;
+}
+
 static int svcd_write( lua_State *L )
 {   
-
+    
     int numargs = lua_gettop(L); // 6
+    printf("%2.0d\n", numargs);
 		if (numargs == 6) {
 			/* GET ALL THE ARGS */
 			size_t g;
@@ -223,12 +263,13 @@ static int svcd_write( lua_State *L )
 			const char* payload =  lua_tolstring(L, 4, &l);
 
 			int timeout_ms = (int)lua_tonumber(L, 5);
-			int* on_done = (int*) lua_tonumber(L, 6);
-    
+
+            printf("Sexy write %s %x %x %s %d\n", targetip, svcid, attrid, payload, timeout_ms);
+
 			/* PARAMS */
     
 			/* SET IVKID */
-			resolve_table(L, "ikvid"); //7
+			resolve_table(L, "ivkid"); //7
 			int ivkid = (int) lua_tonumber(L, -1);
    
   
@@ -242,7 +283,7 @@ static int svcd_write( lua_State *L )
 			// setting ivkid
 			lua_getglobal(L, "SVCD");
 			lua_pushnumber(L, ivkid);
-			lua_setfield(L, -2, "ikvid");
+			lua_setfield(L, -2, "ivkid");
 			lua_settop(L, numargs);
 			/* END SET IVKID*/
  
@@ -250,17 +291,24 @@ static int svcd_write( lua_State *L )
 			resolve_table(L, "handlers"); // 7
 
 			lua_pushnumber(L, ivkid);
-			lua_pushlightfunction(L, on_done);
-
+			lua_pushvalue(L, 6); // the ondone function
 			lua_settable(L, -3);
 			/* END SET HANDLER */
     
-			/* LUA WRITE INVOKE */
-			resolve_table(L, "write_invoke_later"); // 9
-			//function write invoke later 
-					lua_pushnumber(L, ivkid);  // 10
-					lua_pushnumber(L, timeout_ms);
-					lua_call(L, 2, 0);
+			// /* LUA WRITE INVOKE */
+			// resolve_table(L, "write_invoke_later"); // 9
+			// //function write invoke later 
+			// 		lua_pushnumber(L, ivkid);  // 10
+			// 		lua_pushnumber(L, timeout_ms);
+			// 		lua_call(L, 2, 0);
+
+            lua_pushlightfunction(L, libstorm_os_invoke_later);
+                lua_pushnumber(L, timeout_ms * MILLISECOND_TICKS);
+                    lua_pushnumber(L, ivkid);
+                lua_pushcclosure(L, &timeout_func, 1);
+                
+            lua_call(L, 2, 0);
+
 			/* END LUA WRITE INVOKE */
 
 
@@ -301,6 +349,7 @@ static int svcd_write( lua_State *L )
 			lua_call(L, 4, 0);
 			/* END SEND_TO */
 		}
+    printf("End\n");
     return 0; //return # of arguments
 }
 
