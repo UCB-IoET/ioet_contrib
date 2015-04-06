@@ -199,8 +199,6 @@ static int svcd_init( lua_State *L )
 // Authors: Aparna Dhinakaran, Michael Ho, Romi Phadte, Cesar Torres
 /////////////////////////////////////////////////////////////
 
-
-
 void resolve_table(lua_State *L, char* key){
     // push the global table, resolve it and then pop it off the stack
     lua_getglobal(L, "SVCD");
@@ -251,7 +249,6 @@ static int svcd_write( lua_State *L )
 {   
     
     int numargs = lua_gettop(L); // 6
-    printf("%2.0d\n", numargs);
 		if (numargs == 6) {
 			/* GET ALL THE ARGS */
 			size_t g;
@@ -264,10 +261,6 @@ static int svcd_write( lua_State *L )
 
 			int timeout_ms = (int)lua_tonumber(L, 5);
 
-            printf("Sexy write %s %x %x %s %d\n", targetip, svcid, attrid, payload, timeout_ms);
-
-			/* PARAMS */
-    
 			/* SET IVKID */
 			resolve_table(L, "ivkid"); //7
 			int ivkid = (int) lua_tonumber(L, -1);
@@ -289,7 +282,6 @@ static int svcd_write( lua_State *L )
  
 			/* SET HANDLER */
 			resolve_table(L, "handlers"); // 7
-
 			lua_pushnumber(L, ivkid);
 			lua_pushvalue(L, 6); // the ondone function
 			lua_settable(L, -3);
