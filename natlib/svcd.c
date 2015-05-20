@@ -2,7 +2,8 @@
 
 
 #define SVCD_SYMBOLS \
-    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },
+    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) }, \
+    { LSTRKEY( "svcd_notify"), LFUNCVAL ( notify ) },
 
 
 //If this file is defining only specific functions, or if it
@@ -183,5 +184,133 @@ static int svcd_init( lua_State *L )
         lua_call(L, 3, 0);
     }
 
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// SVCD.notify() implementation
+// Maintainers: Sam Kumar <samkumar@berkeley.edu>
+//              Leonard Truong <leonardtruong@berkeley.edu>
+//              Michael Chen <mc.michaelchen.us@gmail.com>
+/////////////////////////////////////////////////////////////
+int notify_cord(lua_State* L) {
+    // args val, SVCD.subscribers[svc_id][attr_id], key
+    int header_index;
+
+    // get next key
+    if (!lua_next(L, 2)) {
+        // return if we've finished
+	return 0;
+    }
+
+    // local header = storm.array.create(1, storm.array.UINT16)
+    lua_pushlightfunction(L, arr_create);
+    lua_pushnumber(L, 1);
+    lua_pushnumber(L, ARR_TYPE_UINT16);
+    lua_call(L, 2, 1);
+    header_index = lua_gettop(L);
+
+    // header:set(1, v)
+    lua_pushstring(L, "set");
+    lua_gettable(L, -2);
+    lua_pushvalue(L, header_index);
+    lua_pushnumber(L, 1);
+    lua_pushvalue(L, 4);  // Store current value (3rd element on stack)
+    lua_call(L, 3, 0);
+
+    // storm.net.sendto(SVCD.ncsock, header:as_str()..value, k, 2527)
+    lua_getglobal(L, "SVCD");
+    lua_pushlightfunction(L, libstorm_net_sendto);
+    lua_pushstring(L, "ncsock");
+    lua_gettable(L, -3);
+    lua_pushstring(L, "as_str");
+    lua_gettable(L, header_index);
+    lua_pushvalue(L, header_index);
+    lua_call(L, 1, 1);
+    lua_pushvalue(L, 1);  // value stored as argument 1
+    lua_concat(L, 2);  // Use lua's concat operator (..)
+    lua_pushvalue(L, 3);  // Push current key
+    lua_pushnumber(L, 2527);
+    lua_call(L, 4, 0);
+
+    // invoke continuation later
+    lua_pushlightfunction(L, libstorm_os_invoke_later);
+    lua_pushnumber(L, 70 * MILLISECOND_TICKS);
+
+    // Push next args to continuation
+    lua_pushlightfunction(L, notify_cord);  // continuation
+    lua_pushvalue(L, 1);  // val
+    lua_pushvalue(L, 2);  // Subscribers table
+    lua_pushvalue(L, 3);  // Current key
+    lua_call(L, 5, 0);
+    return 0;
+}
+
+int notify(lua_State* L) {
+    // args: svc_id, attr_id, value
+    // SVCD.blamap[svc_id][attr_id]
+    lua_getglobal(L, "SVCD");
+    int index_SVCD = lua_gettop(L);
+    lua_pushstring(L, "blamap");
+    lua_gettable(L, index_SVCD);
+    lua_pushvalue(L, 1);  // Push on svc_id
+    lua_gettable(L, -2);
+    lua_pushvalue(L, 2);  // Push on attr_id
+    lua_gettable(L, -2);
+    int index_arg0 = lua_gettop(L);
+
+    // storm.bl.notify(SVCD.blamap[svc_id][attr_id], value)
+    lua_pushlightfunction(L, libstorm_bl_notify);
+    lua_pushvalue(L, index_arg0);  // Push on SVCD.blamap[svc_id][attr_id]
+    lua_pushvalue(L, 3);  // Push on value
+    lua_call(L, 2, 0);
+    lua_pop(L, lua_gettop(L) - index_SVCD);  // Clear stack
+
+    // if SVCD.subscribers[svc_id] == nil then
+    //  return
+    // end
+    lua_pushstring(L, "subscribers");
+    lua_gettable(L, index_SVCD);
+    lua_pushvalue(L, 1);
+    lua_gettable(L, -2);
+    if (lua_isnil(L, -1)) {
+	return 0;
+    }
+
+    // if SVCD.subscribers[svc_id][attr_id] == nil then
+    //  return
+    // end
+    lua_pushvalue(L, 2);
+    lua_gettable(L, -2);
+    if (lua_isnil(L, -1)) {
+	return 0;
+    }
+
+    int attr_index = lua_gettop(L);  // Index of SVCD.subscribers[svc_id][attr_id]
+
+    // Original lua code:
+    // cord.new(function()
+    //     for k, v in pairs(SVCD.subscribers[svc_id][attr_id]) do
+    //         local header = storm.array.create(1, storm.array.UINT16)
+    //         header:set(1, v)
+    //         storm.net.sendto(SVCD.ncsock, header:as_str()..value, k, 2527)
+    //         cord.await(storm.os.invokeLater, 70*storm.os.MILLISECOND)
+    //     end
+    // end)
+
+    // We implemented this using a recursive continuation. We start by calling
+    // the continuation with nil as the current key.  It then uses lua_next to
+    // get the next key, then recursively sets itself as the continuation with
+    // the new current key.  Once the last key is processed the final
+    // continuation will stop, ending the recursion.
+
+    lua_pushlightfunction(L, notify_cord);
+    // Push value
+    lua_pushvalue(L, 3);
+    // Push SVCD.subscribers[svc_id][attr_id]
+    lua_pushvalue(L, attr_index);
+    lua_pushnil(L);
+
+    lua_call(L, 3, 0);
     return 0;
 }
