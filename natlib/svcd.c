@@ -2,7 +2,9 @@
 
 
 #define SVCD_SYMBOLS \
-    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },
+    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },\ 
+    { LSTRKEY( "svcd_test"), LFUNCVAL ( svcd_test ) },\ 
+    { LSTRKEY( "svcd_write"), LFUNCVAL ( svcd_write )},
 
 
 //If this file is defining only specific functions, or if it
@@ -29,6 +31,7 @@ static const LUA_REG_TYPE svcd_meta_map[] =
 // SVCD.init() implementation
 // Maintainer: Michael Andersen <michael@steelcode.com>
 /////////////////////////////////////////////////////////////
+static int svcd_write( lua_State* L );
 
 // The anonymous func in init that allows for dynamic binding of advert_received
 static int svcd_init_adv_received( lua_State *L )
@@ -91,9 +94,13 @@ static int svcd_init( lua_State *L )
     //Load the SVCD table that Lua created
     //This will be index 3
     lua_getglobal(L, "SVCD");
-    printf("Put table at %d\n", lua_gettop(L));
 #endif
     //Now begins the part that corresponds with the lua init function
+
+    //SVCD.write
+    lua_pushstring(L, "write");
+    lua_pushlightfunction(L, svcd_write);
+    lua_settable(L, 3); // Store it in the table
 
     //SVCD.asock
     lua_pushstring(L, "asock");
@@ -185,3 +192,158 @@ static int svcd_init( lua_State *L )
 
     return 0;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// SVCD.write((string targetip, number svcid, number attrid, lightfunction payload, 
+//                        number timeout_ms, lightfunction on_done)) 
+// Authors: Aparna Dhinakaran, Michael Ho, Romi Phadte, Cesar Torres
+/////////////////////////////////////////////////////////////
+
+void resolve_table(lua_State *L, char* key){
+    // push the global table, resolve it and then pop it off the stack
+    lua_getglobal(L, "SVCD");
+    lua_pushstring(L, key);
+    lua_gettable(L, -2);
+    lua_insert(L, -2);
+    lua_settop(L, -2);
+}
+
+static int svcd_test(lua_State* L){
+    int numargs = lua_gettop(L); 
+        if (numargs == 2) {
+            int timeout_ms = (int)lua_tonumber(L, 1);
+
+            lua_pushlightfunction(L, libstorm_os_invoke_later);
+            lua_pushnumber(L, timeout_ms * SECOND_TICKS);
+            lua_pushvalue(L, 2);
+            lua_call(L, 2, 0);
+        }
+    return 0;
+}
+
+
+static int timeout_func(lua_State* L){
+    int ivkid = lua_tonumber(L, lua_upvalueindex(1));
+    resolve_table(L, "TIMEOUT");
+    int timeout = lua_tonumber(L, -1);
+
+    // SVCD.handlers[ivkid] ~= nil
+    resolve_table(L, "handlers");
+    lua_pushnumber(L, ivkid);
+    lua_gettable(L, -2);
+
+    if(!lua_isnil(L, -1)){
+        lua_pushnumber(L, timeout);
+        lua_call(L, 1, 0);
+
+        resolve_table(L, "handlers");
+        lua_pushnumber(L, ivkid);
+        lua_gettable(L, -2);
+        lua_pushnil(L);
+        lua_settable(L, -2);
+    }
+    return 1;
+}
+
+static int svcd_write( lua_State *L )
+{   
+    
+    int numargs = lua_gettop(L); // 6
+		if (numargs == 6) {
+			/* GET ALL THE ARGS */
+			size_t g;
+			const char* targetip = (char*) lua_tolstring(L, 1, &g);
+			int svcid = (int)lua_tonumber(L, 2);
+			int attrid = (int)lua_tonumber(L, 3);
+ 
+			size_t l;
+			const char* payload =  lua_tolstring(L, 4, &l);
+
+			int timeout_ms = (int)lua_tonumber(L, 5);
+
+			/* SET IVKID */
+			resolve_table(L, "ivkid"); //7
+			int ivkid = (int) lua_tonumber(L, -1);
+   
+  
+			ivkid =  ivkid + 1;
+			if( ivkid > 65535 ) { 
+					ivkid = 0;
+			}
+
+			lua_settop(L, numargs);
+
+			// setting ivkid
+			lua_getglobal(L, "SVCD");
+			lua_pushnumber(L, ivkid);
+			lua_setfield(L, -2, "ivkid");
+			lua_settop(L, numargs);
+			/* END SET IVKID*/
+ 
+			/* SET HANDLER */
+			resolve_table(L, "handlers"); // 7
+			lua_pushnumber(L, ivkid);
+			lua_pushvalue(L, 6); // the ondone function
+			lua_settable(L, -3);
+			/* END SET HANDLER */
+    
+			// /* LUA WRITE INVOKE */
+			// resolve_table(L, "write_invoke_later"); // 9
+			// //function write invoke later 
+			// 		lua_pushnumber(L, ivkid);  // 10
+			// 		lua_pushnumber(L, timeout_ms);
+			// 		lua_call(L, 2, 0);
+
+            lua_pushlightfunction(L, libstorm_os_invoke_later);
+                lua_pushnumber(L, timeout_ms * MILLISECOND_TICKS);
+                    lua_pushnumber(L, ivkid);
+                lua_pushcclosure(L, &timeout_func, 1);
+                
+            lua_call(L, 2, 0);
+
+			/* END LUA WRITE INVOKE */
+
+
+			/* SEND TO */
+			lua_pushlightfunction(L, libstorm_net_sendto); 
+					resolve_table(L, "wcsock");
+					/* BEGIN MESSAGE PACK */
+					lua_pushlightfunction(L, libmsgpack_mp_pack);
+							lua_newtable(L);
+							//svcid
+							lua_pushnumber(L, 1);
+							lua_pushnumber(L, svcid);
+							lua_settable(L, -3);
+							//attrid
+							lua_pushnumber(L, 2);
+							lua_pushnumber(L, attrid);
+							lua_settable(L, -3);
+
+							// ivkid
+							lua_pushnumber(L, 3);
+							lua_pushnumber(L, ivkid); //14
+							lua_settable(L, -3);
+
+							//payload
+							lua_pushnumber(L, 4);
+							lua_pushlstring(L, payload, l);
+							lua_settable(L, -3);
+
+					lua_call(L, 1, 1);
+
+					/* END OF MSG PACK FUNCTION */
+
+					// targetip    
+					lua_pushlstring(L, targetip, g);
+					//2526
+					lua_pushnumber(L, 2526);
+
+			lua_call(L, 4, 0);
+			/* END SEND_TO */
+		}
+    printf("End\n");
+    return 0; //return # of arguments
+}
+
+
+

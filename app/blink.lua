@@ -1,6 +1,7 @@
 require("storm") -- libraries for interfacing with the board and kernel
 require("cord") -- scheduler / fiber library
 shield = require("starter") -- interfaces for resources on starter shield
+require("svcd")
 
 print ("blink test ")
 
@@ -19,6 +20,12 @@ function blinker(color)
 end
 
 shield.LED.start()		-- enable LEDs
-storm.os.invokePeriodically(1*storm.os.SECOND, blinker("red"))
+local red_light = blinker("red")
+print(red_light)
+
+SVCD.test(1, red_light)
+SVCD.test(2, red_light)
+SVCD.test(3, red_light)
+SVCD.test(4, red_light)
 cord.enter_loop() -- start event/sleep loop
 
