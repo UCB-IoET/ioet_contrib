@@ -2,8 +2,9 @@
 
 
 #define SVCD_SYMBOLS \
-    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },
-
+    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) \ 
+    { LSTRKEY( "svcd_write"), LFUNCVAL ( svcd_write )},
+    
 
 //If this file is defining only specific functions, or if it
 //is defining the whole thing
@@ -30,6 +31,7 @@ static const LUA_REG_TYPE svcd_meta_map[] =
 // Maintainer: Michael Andersen <michael@steelcode.com>
 /////////////////////////////////////////////////////////////
 
+static int svcd_ndispatch( lua_State *L );
 // The anonymous func in init that allows for dynamic binding of advert_received
 static int svcd_init_adv_received( lua_State *L )
 {
@@ -93,8 +95,13 @@ static int svcd_init( lua_State *L )
     lua_getglobal(L, "SVCD");
     printf("Put table at %d\n", lua_gettop(L));
 #endif
-    //Now begins the part that corresponds with the lua init function
+    
+    //Override symbols in the lua table with C implementation
+    lua_pushstring(L, "ndispatch");
+    lua_pushlightfunction(L, svcd_ndispatch);
+    lua_settable(L, 3); 
 
+    //Now begins the part that corresponds with the lua init function
     //SVCD.asock
     lua_pushstring(L, "asock");
     lua_pushlightfunction(L, libstorm_net_udpsocket);
@@ -183,5 +190,36 @@ static int svcd_init( lua_State *L )
         lua_call(L, 3, 0);
     }
 
+    
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// SVCD.ndispatch((string pay, number srcip, number srcport)) 
+// Authors: Jennifer Dai, Prashan Dharmasena, Wenqin 
+/////////////////////////////////////////////////////////////
+
+static int svcd_ndispatch( lua_State *L )
+{
+    // Checks to make sure it is passed 3 parameters
+    if (lua_gettop(L) != 3) return luaL_error(L, "Expected (pay, srcip, srcport)"); 
+
+    size_t parlen;
+    const char* pay = lua_tolstring(L, -1, &parlen); 
+    uint16_t ivkid = lua_tonumber(L, -1); // changes pay parameter to number and returns
+    lua_getglobal(L, "SVCD"); // gets table
+    lua_pushstring(L, "oursubs"); // use oursubs as the key
+    lua_gettable(L, 4);
+    lua_pushnumber(L, ivkid);
+    lua_pushstring(L, ivkidstr);
+    lua_gettable(L, 5);
+
+    size_t size;
+    const char* item = lua_tolstring(L, 6, &size);
+    if (!lua_isnil(L, 5)) {
+	lua_pushlstring(L, pay+3, parlen-3);
+        lua_pushstring(L, newstr); // pay
+        lua_call(L, 1, 0);
+    }
     return 0;
 }
