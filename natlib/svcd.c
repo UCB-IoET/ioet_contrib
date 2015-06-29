@@ -2,7 +2,8 @@
 
 
 #define SVCD_SYMBOLS \
-    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },
+    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },\
+    { LSTRKEY( "svcd_advert_received"), LFUNCVAL (svcd_advert_received)},
 
 
 //If this file is defining only specific functions, or if it
@@ -30,6 +31,75 @@ static const LUA_REG_TYPE svcd_meta_map[] =
 // Maintainer: Michael Andersen <michael@steelcode.com>
 /////////////////////////////////////////////////////////////
 
+//Lua: storm.n.svcd_advert_received(pay, srcip, srcport)
+//Dispatch an advertisment
+
+int svcd_advert_received(lua_State *L) 
+{
+	char *srcip = luaL_checkstring(L, 2);
+        printf("Service advertisment %s\n", srcip);
+	
+	//check if pay is nil, don't proceed if true
+        if(lua_isnil(L,1))
+	{
+ 		return 0;
+	}
+
+	int srcport = luaL_checknumber(L, 3);
+	
+	lua_pushlightfunction(L, libmsgpack_mp_unpack);      
+       	lua_pushvalue(L,1); 
+	lua_call(L,1,1);	
+
+        //push another reference to the table on top of the stack, so we know where it is
+ 	lua_pushvalue(L, -1);
+    	// stack now contains: -1 => table
+	lua_pushnil(L);
+	// stack now contains: -1 => nil; -2 => table	
+       
+	//outer loop: parses key value pairs of unpacked msg    	
+	while (lua_next(L, -2))
+    	{
+                // stack now contains: -1 => value; -2 => key; -3 => table
+        	lua_pushvalue(L, -2);
+                // stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
+		
+		const char *k = lua_tostring(L, -1);
+        	if (strcmp(k, "id")==0)
+		{	
+        		const char *v = lua_tostring(L, -2);
+	       		printf("ID = %s\n", v);	
+		}
+      		else
+		{
+			unsigned int k = lua_tonumber(L,-1);
+       			printf(" 0x%04x:\n",k);
+ 
+    			lua_pushvalue(L, -2);
+  			lua_pushnil(L);
+			//same comments as outer loop
+    			while (lua_next(L, -2))
+    			{
+        			lua_pushvalue(L, -2);
+        			int kk = lua_tonumber(L, -1);
+        			unsigned int vv = lua_tonumber(L, -2);
+				printf("   >%d: 0x%04x\n", kk, vv);
+				lua_pop(L, 2);
+    			}
+    			
+			lua_pop(L, 1);
+		}	
+
+		// pop value + copy of key, leaving original key
+    		lua_pop(L, 2);
+		// stack now contains: -1 => key; -2 => table
+    	}
+	// stack now contains: -1 => table (when lua_next returns 0 it pops the key but does not push anything.)
+        // Pop table
+    	lua_pop(L, 1);
+	// Stack is now the same as it was on entry to this function
+}
+
 // The anonymous func in init that allows for dynamic binding of advert_received
 static int svcd_init_adv_received( lua_State *L )
 {
@@ -47,6 +117,7 @@ static int svcd_init_adv_received( lua_State *L )
     lua_call(L, numargs, 0);
     return 0;
 }
+
 
 // Lua: storm.n.svcd_init ( id, onready )
 // Initialises the SVCD module, in global scope
