@@ -133,7 +133,7 @@ end
 -- Erases the screen. --
 function LCD:clear()
     self:command(codes.LCD_CLEARDISPLAY)
-    cord:await(storm.os.invokeLater, 2*storm.os.MILLISECOND)
+    cord.await(storm.os.invokeLater, 2*storm.os.MILLISECOND)
 end
 
 -- Writes a string to the LCD display at the cursor. --
