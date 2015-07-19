@@ -21,7 +21,24 @@
 #define ADCIFE_SYMBOLS \
     { LSTRKEY( "adcife_init"), LFUNCVAL ( adcife_init ) }, \
     { LSTRKEY( "adcife_new"), LFUNCVAL ( adcife_new ) }, \
-    { LSTRKEY( "adcife_sample_an0"), LFUNCVAL ( adcife_sample_an0 ) },
+    { LSTRKEY( "adcife_12BIT"), LNUMVAL ( 0 ) }, \
+    { LSTRKEY( "adcife_8BIT"), LNUMVAL ( 1 ) }, \
+    { LSTRKEY( "adcife_1X"), LNUMVAL ( 0b000 ) }, \
+    { LSTRKEY( "adcife_2X"), LNUMVAL ( 0b001 ) }, \
+    { LSTRKEY( "adcife_4X"), LNUMVAL ( 0b010 ) }, \
+    { LSTRKEY( "adcife_8X"), LNUMVAL ( 0b011 ) }, \
+    { LSTRKEY( "adcife_16X"), LNUMVAL ( 0b100 ) }, \
+    { LSTRKEY( "adcife_32X"), LNUMVAL ( 0b101 ) }, \
+    { LSTRKEY( "adcife_64X"), LNUMVAL ( 0b110 ) }, \
+    { LSTRKEY( "adcife_HALFX"), LNUMVAL ( 0b111 ) }, \
+    { LSTRKEY( "adcife_ADC_REFGND"), LNUMVAL ( ANALOG_REFGND_N ) },
+
+static const LUA_REG_TYPE adc_meta_map[] =
+{
+    { LSTRKEY( "sample" ), LFUNCVAL ( adcife_sample ) },
+    { LSTRKEY( "__index" ), LROVAL ( adc_meta_map ) },
+    { LNILKEY, LNILVAL }
+};
 
 /* The analog pins on the firestorm go through several layers of translation
  * before you get to the channel numbers that are expected for the analog
@@ -67,7 +84,7 @@ void c_adcife_init()
     ADCIFE->cr.bits.bgreqen = 1;
 }
 
-int c_adcife_sample_channel(uint8_t channel)
+int c_adcife_sample_channel(uint8_t poschan, uint8_t negchan, uint8_t gain, uint8_t resolution)
 {
     //TODO: use the channel, maybe add more parameters
 
@@ -77,15 +94,24 @@ int c_adcife_sample_channel(uint8_t channel)
     //Clear out the struct
     seqcfg.flat = 0;
     //Set the positive channel to A0
-    seqcfg.bits.muxpos = chanmap[0];
+    seqcfg.bits.muxpos = chanmap[poschan];
     //Enable bipolar mode, this seems to drastically reduce noise
     seqcfg.bits.bipolar = 1;
-    //Enable the internal voltage source for the negative reference
-    seqcfg.bits.internal = 0b10;
-    //Set the negative reference to ground
-    seqcfg.bits.muxneg = 0b011;
-    //Set the gain to 1/2
-    //seqcfg.bits.gain = 0b111;
+    if (negchan == (ANALOG_REFGND_N - 14)) {
+        //Enable the internal voltage source for the negative reference
+        seqcfg.bits.internal = 0b10;
+        //Set the negative reference to ground
+        seqcfg.bits.muxneg = 0b011;
+    } else {
+        //Enable the internal voltage source for the negative reference
+        seqcfg.bits.internal = 0b00;
+        //Set the negative reference to ground
+        seqcfg.bits.muxneg = chanmap[negchan];
+    }
+    //Set the gain
+    seqcfg.bits.gain = (gain << 5) >> 5;
+    //Set the resolution
+    seqcfg.bits.res = resolution ? 1 : 0;
     //Set it
     ADCIFE->seqcfg = seqcfg;
     //Start the conversion
@@ -98,21 +124,34 @@ int c_adcife_sample_channel(uint8_t channel)
 int adcife_init(lua_State *L)
 {
     c_adcife_init();
-    return 0;
+    return 1;
 }
 
-int adcife_sample_an0(lua_State *L)
+int adcife_sample(lua_State *L)
 {
     //TODO: turn this into a metamethod on a table, look in stormarray.c for examples
-    int sample = c_adcife_sample_channel(0);
+    storm_adc_t *adc = lua_touserdata(L, 1);
+    int sample = c_adcife_sample_channel(adc->poschan, adc->negchan, adc->gain, adc->resolution);
+    sample = (sample << 16) >> 16;
     lua_pushnumber(L, sample);
     return 1;
 }
 
 //Lua: storm.n.adcife_new(poschan, negchan, gain, resolution)
+//Poschan should be a value from storm.io.AX
+//Negchan should be a value from storm.io.AX or storm.n.adcife_ADC_REFGND
+//Gain should be a value from storm.n.adcife_nX
+//Resolution should be a value from storm.n.adcife_12BIT or storm.n.adcife_8BIT
 int adcife_new(lua_State *L)
 {
     //TODO: make this construct a table with a rotable metatable and return it
     //see stormarray for examples.
-    return 0;
+    storm_adc_t *adc = lua_newuserdata(L, sizeof(storm_adc_t));
+    adc->poschan = ((uint8_t) luaL_checkinteger(L, 1)) - 14;
+    adc->negchan = ((uint8_t) luaL_checkinteger(L, 2)) - 14;
+    adc->gain = (uint8_t) luaL_checkinteger(L, 3);
+    adc->resolution = (uint8_t) luaL_checkinteger(L, 4);
+    lua_pushrotable(L, (void*)adc_meta_map);
+    lua_setmetatable(L, -2);
+    return 1;
 }
