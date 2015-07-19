@@ -31,7 +31,6 @@
 
 #include "natlib/reliableNetworkQueue/rnq.c"
 
-
 ////////////////// BEGIN FUNCTIONS /////////////////////////////
 
 int contrib_fourth_root_m1000(lua_State *L) //mandatory signature

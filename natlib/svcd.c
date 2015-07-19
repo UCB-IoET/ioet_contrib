@@ -1,9 +1,13 @@
+#include "libstormarray.h"
+#include "lrodefs.h"
+
+static int svcd_subdispatch(lua_State *L);
+
 //This file is included into native.c
 
-
 #define SVCD_SYMBOLS \
-    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) },
-
+    { LSTRKEY( "svcd_init"), LFUNCVAL ( svcd_init ) }, \
+    { LSTRKEY( "svcd_subdispatch"), LFUNCVAL ( svcd_subdispatch ) }, 
 
 //If this file is defining only specific functions, or if it
 //is defining the whole thing
@@ -143,8 +147,7 @@ static int svcd_init( lua_State *L )
     lua_pushstring(L, "subsock");
     lua_pushlightfunction(L, libstorm_net_udpsocket);
     lua_pushnumber(L, 2530);
-    lua_pushstring(L, "subdispatch");
-    lua_gettable(L, 3);
+    lua_pushlightfunction(L, svcd_subdispatch);
     lua_call(L, 2, 1);
     lua_settable(L, 3); //Store
 
@@ -184,4 +187,83 @@ static int svcd_init( lua_State *L )
     }
 
     return 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// SVCD.subdispatch() implementation
+// Maintainer: Running with scissors
+//////////////////////////////////////////////////////////////////////////////
+
+static int svcd_subdispatch(lua_State *L) {
+  //local parr = storm.array.fromstr(pay)
+  size_t len;
+  uint8_t *parr __attribute__((aligned(2))) = lua_tolstring(L, 1, &len);
+  uint8_t *srcip = lua_tostring(L, 2);
+  uint32_t strcport = lua_tointeger(L, 3);
+
+  //local cmd = parr:get(1);
+  uint8_t cmd = parr[0];
+  //local svc_id = parr:get_as(storm.array.UINT16,1);
+  int16_t svc_id = *(int16_t*)(parr+1);
+  //local attr_id = parr:get_as(storm.array.UINT16,3);
+  int16_t attr_id = *(int16_t*)(parr+3);
+  //local ivkid = parr:get_as(storm.array.UINT16, 5);
+  int16_t ivkid = *(int16_t*)(parr+5);
+
+  lua_getglobal(L, "SVCD");
+  lua_pushstring(L, "subscribers");
+  lua_gettable(L, -2);
+  lua_pushinteger(L, svc_id);
+  lua_gettable(L, -2);
+  //stack: SVCD, SVCD[subscribers], SVCD[subscribers][svc_id]
+  if (cmd == 1){ //subscribe command
+    if (lua_isnil(L,-1)){ // if (SVCD.subscribers[svc_id] == nil){
+      lua_pop(L, 1); //stack: SVCD, SVCD[subscribers]
+      //SVCD.subscribers[svc_id] = {};
+      lua_newtable(L);
+      lua_pushinteger(L, svc_id);
+      lua_pushvalue(L, -2);
+      //stack: SVCD, SVCD[subscribers], <newTable>, svc_id, <newTable>
+      lua_settable(L, -4);
+    }
+    //stack: SVCD, SVCD[subscribers], SVCD[subscribers][svc_id],
+    //if (SVCD.subscribers[svc_id][attr_id] == nil){
+    lua_pushstring(L,"attr_id");
+    lua_gettable(L, -2);
+    if (lua_isnil(L, -1)){
+      //SVCD.subscribers[svc_id][attr_id] = {}
+      lua_pop(L, 1);
+      lua_newtable(L);
+      lua_pushinteger(L, attr_id);
+      lua_pushvalue(L, -2);
+      lua_settable(L, -4);
+    }
+    //stack: SVCD[subscribers], SVCD[subscribers][svc_id], SVCD[subscribers][svc_id][attr_id]
+
+    //SVCD.subscribers[svc_id][attr_id][srcip] = ivkid;
+    lua_pushstring(L, srcip);
+    lua_pushnumber(L, ivkid);
+    lua_settable(L, -3);
+
+  }else if (cmd == 0){ //unsubscribe command
+    //stack: SVCD, SVCD[subscribers], SVCD[subscribers][svc_id]
+
+    //if (SVCD.subscribers[svc_id] == nil){
+    if (lua_isnil(L, -1)){
+      return 0;
+    }
+    //if (SVCD.subscribers[svc_id][attr_id] == nil){
+    lua_pushnumber(L, attr_id);
+    lua_gettable(L, -2);
+    if (lua_isnil(L, -1)){
+      return 0;
+    }
+    //stack: SVCD, SVCD[subscribers], SVCD[subscribers][svc_id], SVCD[subscribers][svc_id][attr_id]
+    //SVCD.subscribers[svc_id][attr_id][srcip] = nil;
+    lua_pushstring(L, srcip);
+    lua_pushnil(L);
+    lua_settable(L, -3);
+  }
+  return 0;
 }
