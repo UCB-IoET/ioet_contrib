@@ -68,7 +68,7 @@ msg: the msg to be posted to the message section of the bearCast display
 Send device data to the device specific section on the bearCast display
 ```
 Data Type: A list of the types of each data point, must match the template requirement in string format 
--- e.g. datatype : {"str", "image", "html"}
+-- e.g. datatype : {"string", "image", "html"}
 Data: A list of actual data being sent, must match the data type in string format
 -- e.g. data: {"hello", "http://shell.storm.pm/test.jpg", "http://shell.storm.pm/hi.html"}
 Template: The template used to render the data, could be an URL or a preset KEY
